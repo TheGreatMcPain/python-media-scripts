@@ -1,0 +1,23 @@
+{
+    "sourceFile": "source.mkv",
+    "title": "Bloopers",
+    "outputFile": "Bloopers.mkv",
+    "video": {
+        "title": "1080p (H264)",
+        "language": "eng"
+    },
+    "audio": [{
+        "extension": "ac3",
+        "default": "1",
+        "id": "1",
+        "language": "eng",
+        "title": "Stereo (AC3)"
+    }],
+    "subs": [{
+        "extension": "sup",
+        "default": "0",
+        "id": "2",
+        "language": "eng",
+        "title": "English Subtitles (PGS)"
+    }]
+}
