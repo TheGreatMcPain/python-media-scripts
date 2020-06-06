@@ -10,7 +10,7 @@ import xml.etree.cElementTree as ET
 # Initialize VapourSynth
 core = vs.get_core()
 
-# Set niceness
+# Set niceness (I wanna play games dammit)
 ps = psutil.Process(os.getpid())
 ps.nice(15)
 
@@ -26,7 +26,7 @@ def main():
     lsdir = os.listdir('.')
     if INFOFILE in lsdir:
         print(INFOFILE, "found in current directory.")
-        print("We'll only convert one mkv file.")
+        print("We'll only convert one mkv file.\n")
         convertMKV(INFOFILE)
     else:
         folders = []
@@ -219,6 +219,16 @@ def prepForcedSubs(info):
             createNonForced('subtitles-' + track['id'] + '.sup')
 
 
+# from: https://github.com/Tatsh/ffmpeg-progress/blob/master/ffmpeg_progress.py
+def ffprobe(in_file):
+    """ffprobe font-end."""
+    return dict(
+        json.loads(
+            sp.check_output(('ffprobe', '-v', 'quiet', '-print_format', 'json',
+                             '-show_format', '-show_streams', in_file),
+                            encoding='utf-8')))
+
+
 def extractTracks(info):
     sourceFile = info['sourceFile']
     audio = info['audio']
@@ -227,8 +237,30 @@ def extractTracks(info):
     else:
         subs = 0
 
-    cmd = ['mkvextract', sourceFile, 'tracks']
+    cmd = ['ffmpeg', '-y', '-i', sourceFile]
+    for track in audio:
+        if "yes" in track['convert']:
+            extension = track['extension']
+            cmd += ['-map', '0:' + track['id']]
+            cmd += track['ffmpegopts']
+            cmd += ['audio-' + track['id'] + '.' + extension]
 
+            print("Converting Audio via ffmpeg")
+            print("Total Duration: ", end='')
+            print(
+                ffprobe(sourceFile)['streams'][int(
+                    track['id'])]['tags']['DURATION-eng'])
+            p = sp.Popen(cmd,
+                         stderr=sp.STDOUT,
+                         stdout=sp.PIPE,
+                         universal_newlines=True)
+            for line in p.stdout:
+                line = line.rstrip()
+                if 'size=' in line:
+                    print(f'{line}\r', end='')
+            print()
+
+    cmd = ['mkvextract', sourceFile, 'tracks']
     for track in audio:
         extension = track['extension']
         cmd += [track['id'] + ':' + 'audio-' + track['id'] + '.' + extension]
@@ -243,6 +275,7 @@ def extractTracks(info):
 
     cmd += ['chapters', 'chapters.xml']
 
+    print("\nExtracting tracks via mkvextract.")
     for x in cmd:
         print(x, end=' ')
     print()
