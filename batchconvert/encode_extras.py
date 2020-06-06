@@ -24,45 +24,52 @@ BDSUP2SUB = "/home/james/.local/share/bdsup2sub/BDSup2Sub.jar"
 
 def main():
     lsdir = os.listdir('.')
-    folders = []
-    for x in lsdir:
-        if os.path.isdir(x):
-            infoPath = os.path.join(x, INFOFILE)
-            if os.path.isfile(infoPath):
-                folders.append(x)
+    if INFOFILE in lsdir:
+        print(INFOFILE, "found in current directory.")
+        print("We'll only convert one mkv file.")
+        convertMKV(INFOFILE)
+    else:
+        folders = []
+        for x in lsdir:
+            if os.path.isdir(x):
+                infoPath = os.path.join(x, INFOFILE)
+                if os.path.isfile(infoPath):
+                    folders.append(x)
 
-    for folder in folders:
-        os.chdir(folder)
-        index = folders.index(folder)
-        total = len(folders)
-        print(index, "out of", total, "done.\n")
+        for folder in folders:
+            os.chdir(folder)
+            index = folders.index(folder)
+            total = len(folders)
+            print(index, "out of", total, "done.\n")
+            convertMKV(INFOFILE)
+            os.chdir("..")
 
-        if os.path.isfile(RESUME):
-            status = readResume()
-        else:
-            status = "juststarted"
 
-        info = getInfo(INFOFILE)
+def convertMKV(infoFile):
+    if os.path.isfile(RESUME):
+        status = readResume()
+    else:
+        status = "juststarted"
 
-        if "juststarted" in status:
-            extractTracks(info)
-            status = writeResume("extracted")
-            print()
-        if "extracted" in status:
-            prepForcedSubs(info)
-            print()
-            encodeVideo(info)
-            status = writeResume("encoded")
-            print()
-        if "encoded" in status:
-            mergeMKV(info)
-            os.rename(info['outputFile'], os.path.join("..",
-                                                       info['outputFile']))
-            status = writeResume("merged")
-            print()
-        if "merged" in status:
-            print("This one is done.")
-        os.chdir("..")
+    info = getInfo(infoFile)
+
+    if "juststarted" in status:
+        extractTracks(info)
+        status = writeResume("extracted")
+        print()
+    if "extracted" in status:
+        prepForcedSubs(info)
+        print()
+        encodeVideo(info)
+        status = writeResume("encoded")
+        print()
+    if "encoded" in status:
+        mergeMKV(info)
+        os.rename(info['outputFile'], os.path.join("..", info['outputFile']))
+        status = writeResume("merged")
+        print()
+    if "merged" in status:
+        print("This one is done.")
 
 
 def writeResume(status):
