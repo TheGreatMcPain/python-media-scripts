@@ -151,6 +151,7 @@ def encodeVideo(info):
 
     # VapourSynth stuff
     core = vs.core
+    print("Sourcing", sourceFile, "via FFmpegSource2.")
     video = core.ffms2.Source(sourceFile)
     if "yes" in info['video']['ignoreBars']:
         video = core.std.CropRel(video, top=140, bottom=140)
