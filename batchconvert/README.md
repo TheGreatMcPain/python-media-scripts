@@ -19,6 +19,9 @@ deleted-scenes/info.json
 encode_extras.py
 ```
 
+If you have `encode_extras.py` in the same directory as an `info.json` the script
+will only convert one file.
+
 ## TODO
 
 * Add Ability to transcode audio tracks to different formats. DONE
