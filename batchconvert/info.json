@@ -4,7 +4,8 @@
     "outputFile": "Avengers - End Game.mkv",
     "video": {
         "title": "1080p (H264)",
-        "language": "eng"
+        "language": "eng",
+        "ignoreBars": "yes"
     },
     "audio": [{
             "extension": "flac",
