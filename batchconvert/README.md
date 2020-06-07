@@ -21,5 +21,5 @@ encode_extras.py
 
 ## TODO
 
-* Add Ability to transcode audio tracks to different formats.
-* Create nightmode tracks option.
+* Add Ability to transcode audio tracks to different formats. DONE
+* Create nightmode tracks option. DONE
