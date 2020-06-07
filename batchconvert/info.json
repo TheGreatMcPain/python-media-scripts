@@ -1,23 +1,47 @@
 {
     "sourceFile": "source.mkv",
-    "title": "Bloopers",
-    "outputFile": "Bloopers.mkv",
+    "title": "Avengers - End Game",
+    "outputFile": "Avengers - End Game.mkv",
     "video": {
         "title": "1080p (H264)",
         "language": "eng"
     },
     "audio": [{
-        "extension": "ac3",
-        "default": "1",
-        "id": "1",
-        "language": "eng",
-        "title": "Stereo (AC3)"
-    }],
+            "extension": "flac",
+            "convert": "yes",
+            "ffmpegopts": ["-compression_level", "8", "-acodec", "flac"],
+            "nightmode": "yes",
+            "nightmodeCodec": "flac",
+            "nightmodeLoudnormName": "Stereo Nightmode Loudnorm (FLAC)",
+            "nightmodeDrcName": "Stereo Nightmode DRC+Loudnorm (FLAC)",
+            "default": "1",
+            "id": "1",
+            "language": "eng",
+            "title": "7.1 Surround (FLAC)"
+        },
+        {
+            "extension": "ac3",
+            "convert": "no",
+            "nightmode": "no",
+            "default": "0",
+            "id": "5",
+            "language": "eng",
+            "title": "Commentary (AC3)"
+        }
+    ],
     "subs": [{
-        "extension": "sup",
-        "default": "0",
-        "id": "2",
-        "language": "eng",
-        "title": "English Subtitles (PGS)"
-    }]
+            "extension": "sup",
+            "default": "0",
+            "id": "6",
+            "language": "eng",
+            "title": "English Subtitles (PGS)"
+        },
+        {
+            "extension": "sup",
+            "default": "0",
+            "id": "9",
+            "language": "eng",
+            "title": "English Commentary Subtitles (PGS)"
+        }
+    ]
 }
