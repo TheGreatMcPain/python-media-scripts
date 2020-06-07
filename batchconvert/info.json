@@ -17,7 +17,7 @@
             "--preset", "veryslow", "--tune", "film",
             "--level", "4.1", "--crf", "16", "--qcomp", "0.7",
             "--input-range", "tv", "--range", "tv",
-            "--colorprim", "bt709", "--tranfer", "bt709", "--colormatrix", "bt709"
+            "--colorprim", "bt709", "--transfer", "bt709", "--colormatrix", "bt709"
         ]
     },
     "audio": [{
