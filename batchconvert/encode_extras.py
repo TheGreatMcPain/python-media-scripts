@@ -365,7 +365,7 @@ def createNightmodeTracks(info):
             loudnormFile = 'nightmode-loudnorm-' + track['id'] + '.flac'
             DRCFile = 'nightmode-drc-' + track['id'] + '.flac'
             print("Creating 'Loudnorm' track.")
-            nightmodeTrack(inFile, loudnormFile, codec, True, MAXDB)
+            nightmodeTrack(inFile, loudnormFile, codec, False, MAXDB)
             print("Creating 'DRC+Loudnorm' track.")
             nightmodeTrack(inFile, DRCFile, codec, True, MAXDB)
 
@@ -417,7 +417,7 @@ def extractTracks(info):
 
 def getInfo(infoFile):
     try:
-        info = json.load(open('info.json', 'r'))
+        info = json.load(open(infoFile, 'r'))
     except IOError:
         print("Error: 'info.json' not found.")
 
