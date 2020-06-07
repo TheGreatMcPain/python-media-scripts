@@ -8,8 +8,6 @@ import time
 import psutil
 import subprocess as sp
 import xml.etree.cElementTree as ET
-# Initialize VapourSynth
-core = vs.get_core()
 
 # Set niceness (I wanna play games dammit)
 ps = psutil.Process(os.getpid())
@@ -152,23 +150,32 @@ def encodeVideo(info):
     sourceFile = info['sourceFile']
 
     # VapourSynth stuff
+    core = vs.core
     video = core.ffms2.Source(sourceFile)
-    video = haf.GSMC(video, thSAD=150, radius=1)
-    video = core.f3kdb.Deband(video, dynamic_grain=False, preset="Low")
+    if "yes" in info['video']['ignoreBars']:
+        video = core.std.CropRel(video, top=140, bottom=140)
+        print("Cropping video to " + str(video.width) + "x" +
+              str(video.height))
+
+    print("Applying GrainStabilizeMC for better video compression.")
+    video = haf.GSMC(video, thSAD=150, radius=2)
+    print("Applying flash3kyuu_deband to 'hide' degrain artifacts.")
+    video = core.f3kdb.Deband(video, dynamic_grain=True, preset="Low")
+    if "yes" in info['video']['ignoreBars']:
+        video = core.std.AddBorders(video, top=140, bottom=140)
+        print("Restoring video borders.")
+
     for sub in info['subs']:
         supFile = 'subtitles-forced-' + sub['id'] + '.sup'
         if os.path.isfile(supFile):
             video = core.sub.ImageFile(video, supFile)
             break
-
-    framecount = video.num_frames
-
     cmd = [
         'x264', '--demuxer', 'y4m', '--preset', 'veryslow', '--tune', 'film',
         '--level', '4.1', '--crf', '18', '--qcomp', '0.65', '--input-range',
         'tv', '--range', 'tv', '--colorprim', 'bt709', '--transfer', 'bt709',
         '--colormatrix', 'bt709', '--frames',
-        str(framecount), '--output', 'video.mkv', '-'
+        str(video.num_frames), '--output', 'video.mkv', '-'
     ]
 
     for x in cmd:
