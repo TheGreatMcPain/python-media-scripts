@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-import vapoursynth as vs
-import havsfunc as haf
 import json
 import os
 import shutil
@@ -148,36 +146,29 @@ def mergeMKV(info):
 
 def encodeVideo(info):
     sourceFile = info['sourceFile']
+    vpy = info['video']['vapoursynth']
 
     # VapourSynth stuff
+    import vapoursynth as vs
     core = vs.core
-    print("Sourcing", sourceFile, "via FFmpegSource2.")
-    video = core.ffms2.Source(sourceFile)
-    if "yes" in info['video']['ignoreBars']:
-        video = core.std.CropRel(video, top=140, bottom=140)
-        print("Cropping video to " + str(video.width) + "x" +
-              str(video.height))
-
-    print("Applying GrainStabilizeMC for better video compression.")
-    video = haf.GSMC(video, thSAD=150, radius=2)
-    print("Applying flash3kyuu_deband to 'hide' degrain artifacts.")
-    video = core.f3kdb.Deband(video, dynamic_grain=True, preset="Low")
-    if "yes" in info['video']['ignoreBars']:
-        video = core.std.AddBorders(video, top=140, bottom=140)
-        print("Restoring video borders.")
+    for func in vpy:
+        if 'SOURCEFILE' in func:
+            func = func.replace('SOURCEFILE', "'" + sourceFile + "'")
+        if 'import' in func:
+            exec(func)
+        else:
+            video = eval(func)
 
     for sub in info['subs']:
         supFile = 'subtitles-forced-' + sub['id'] + '.sup'
         if os.path.isfile(supFile):
+            print("Hardcoding Forced Subtitle id:", sub['id'])
             video = core.sub.ImageFile(video, supFile)
             break
-    cmd = [
-        'x264', '--demuxer', 'y4m', '--preset', 'veryslow', '--tune', 'film',
-        '--level', '4.1', '--crf', '18', '--qcomp', '0.65', '--input-range',
-        'tv', '--range', 'tv', '--colorprim', 'bt709', '--transfer', 'bt709',
-        '--colormatrix', 'bt709', '--frames',
-        str(video.num_frames), '--output', 'video.mkv', '-'
-    ]
+
+    cmd = ['x264', '--demuxer', 'y4m']
+    cmd += info['video']['x264opts']
+    cmd += ['--frames', str(video.num_frames), '--output', 'video.mkv', '-']
 
     for x in cmd:
         print(x, end=' ')
