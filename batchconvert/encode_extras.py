@@ -15,8 +15,8 @@ ps.nice(15)
 INFOFILE = 'info.json'
 RESUME = 'resume-file'
 
-JAVA = "/usr/lib64/openjdk-11/bin/java"
-BDSUP2SUB = "/home/james/.local/share/bdsup2sub/BDSup2Sub.jar"
+JAVA = "/usr/bin/java"
+BDSUP2SUB = "~/.local/share/bdsup2sub/BDSup2Sub.jar"
 
 MAXDB = '-0.5'
 
@@ -180,44 +180,7 @@ def encodeVideo(info):
 
 
 def prepForcedSubs(info):
-    def createNonForced(sourceFile):
-        os.mkdir('subtitles')
-        os.chdir('subtitles')
-        cmd = [
-            JAVA, '-jar', BDSUP2SUB, '--output', 'subtitles.xml',
-            os.path.join('..', sourceFile)
-        ]
-        print("Exporting to BDXML.")
-        p = sp.Popen(cmd, stdout=sp.DEVNULL, stderr=sp.DEVNULL)
-        p.communicate()
-
-        print("Swapping forced subtitle flag.")
-        tree = ET.parse('subtitles.xml')
-        root = tree.getroot()
-        for event in root.iter('Event'):
-            if event.attrib['Forced'] in 'False':
-                event.set("Forced", "True")
-            else:
-                event.set("Forced", "False")
-        tree.write('subtitles-new.xml')
-        os.chdir("..")
-        print("Exporting to", sourceFile)
-        cmd = [
-            JAVA, '-jar', BDSUP2SUB, '--forced-only', '--output',
-            'subtitles-temp.sup',
-            os.path.join('subtitles', 'subtitles-new.xml')
-        ]
-        p = sp.Popen(cmd, stdout=sp.DEVNULL, stderr=sp.DEVNULL)
-        p.communicate()
-        cmd = [
-            JAVA, '-jar', BDSUP2SUB, '--force-all', 'clear', '--output',
-            sourceFile, 'subtitles-temp.sup'
-        ]
-        p = sp.Popen(cmd, stdout=sp.DEVNULL, stderr=sp.DEVNULL)
-        p.communicate()
-        shutil.rmtree('subtitles', ignore_errors=True)
-        os.remove('subtitles-temp.sup')
-
+    bdsup2sub = os.path.expanduser(BDSUP2SUB)
     if "subs" in info:
         subs = info['subs']
     else:
@@ -229,7 +192,7 @@ def prepForcedSubs(info):
             return 0
 
         cmd = [
-            JAVA, '-jar', BDSUP2SUB, '--forced-only', '--output',
+            JAVA, '-jar', bdsup2sub, '--forced-only', '--output',
             'subtitles-forced-' + track['id'] + '.sup',
             'subtitles-' + track['id'] + '.sup'
         ]
@@ -238,7 +201,43 @@ def prepForcedSubs(info):
         print("Checking if 'subtitles-" + track['id'] +
               ".sup' has forced subs")
         if os.path.isfile('subtitles-forced-' + track['id'] + '.sup'):
-            createNonForced('subtitles-' + track['id'] + '.sup')
+            sourceFile = 'subtitles-' + track['id'] + '.sup'
+            os.mkdir('subtitles')
+            os.chdir('subtitles')
+            cmd = [
+                JAVA, '-jar', bdsup2sub, '--output', 'subtitles.xml',
+                os.path.join('..', sourceFile)
+            ]
+            print("Exporting to BDXML.")
+            p = sp.Popen(cmd, stdout=sp.DEVNULL, stderr=sp.DEVNULL)
+            p.communicate()
+
+            print("Swapping forced subtitle flag.")
+            tree = ET.parse('subtitles.xml')
+            root = tree.getroot()
+            for event in root.iter('Event'):
+                if event.attrib['Forced'] in 'False':
+                    event.set("Forced", "True")
+                else:
+                    event.set("Forced", "False")
+            tree.write('subtitles-new.xml')
+            os.chdir("..")
+            print("Exporting to", sourceFile)
+            cmd = [
+                JAVA, '-jar', bdsup2sub, '--forced-only', '--output',
+                'subtitles-temp.sup',
+                os.path.join('subtitles', 'subtitles-new.xml')
+            ]
+            p = sp.Popen(cmd, stdout=sp.DEVNULL, stderr=sp.DEVNULL)
+            p.communicate()
+            cmd = [
+                JAVA, '-jar', bdsup2sub, '--force-all', 'clear', '--output',
+                sourceFile, 'subtitles-temp.sup'
+            ]
+            p = sp.Popen(cmd, stdout=sp.DEVNULL, stderr=sp.DEVNULL)
+            p.communicate()
+            shutil.rmtree('subtitles', ignore_errors=True)
+            os.remove('subtitles-temp.sup')
 
 
 # from: https://github.com/Tatsh/ffmpeg-progress/blob/master/ffmpeg_progress.py
