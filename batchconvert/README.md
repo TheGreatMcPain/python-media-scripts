@@ -31,7 +31,7 @@ that sits next to the `info.json` file.\
 
 #### There's an example `info.json` in this folder.
 
-Once that is done place `encode_extras.py` in the parent directory and run it.
+Once that is done place `batchconvert.py` in the parent directory and run it.
 
 Example directory structure:
 ```
@@ -39,8 +39,8 @@ bloopers/source.mkv
 bloopers/info.json
 deleted-scenes/source.mkv
 deleted-scenes/info.json
-encode_extras.py
+batchconvert.py
 ```
 
-If you have `encode_extras.py` in the same directory as an `info.json` the script
+If you have `batchconvert.py` in the same directory as an `info.json` the script
 will only convert one file.
