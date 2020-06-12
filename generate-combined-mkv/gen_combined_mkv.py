@@ -77,8 +77,10 @@ def createMKV(dirs, sourceFile, outFile):
         mkvfile = os.path.join(folder, sourceFile)
         cmd.append('+' + mkvfile)
 
+    # Have mkvmerge generate a chapter entry for each file it appends.
     cmd += ['--generate-chapters', 'when-appending']
 
+    # Print the mkvmerge command.
     for x in cmd:
         print(x, end=' ')
     print()
@@ -100,15 +102,16 @@ def applyCustomTitles(titles):
     """
     Creates 'chapters-new.xml' which has the user created chapter names.
     """
-    # Read chapters.xml into xmlstr.
+    # Read 'chapters.xml' into a string.
     with open('chapters.xml', 'rb') as f:
         xmlstr = f.read()
-    # Get DOCTYPE entry from xmlstr
+    # Since ElementTree doesn't have support for reading/writing the
+    # DOCTYPE line from xml we need to do it manually.
     for x in xmlstr.split(b'\n'):
         if b'DOCTYPE' in x:
             doctype = x
             break
-    # Parse XML data from xmlstr.
+    # Parse xml data that we previously read.
     root = ET.fromstring(xmlstr)
     # Modify chapter names.
     index = 0
@@ -116,14 +119,12 @@ def applyCustomTitles(titles):
         chapStr.text = titles[index]
         index += 1
 
-    # Generate list of strings from new XML data.
+    # Creates a list from the new xml, so that we can easily write the DOCTYPE
+    # line in the correct place.
     newxmllist = ET.tostring(root, encoding='utf8', method='xml').split(b'\n')
     with open('chapters-new.xml', 'wb') as f:
-        # Write xml_definition to file
         f.write(newxmllist[0] + b'\n')
-        # Write DOCTYPE to file
         f.write(doctype + b'\n')
-        # Dump the rest to file
         for line in newxmllist[1:]:
             line += b'\n'
             f.write(line)
