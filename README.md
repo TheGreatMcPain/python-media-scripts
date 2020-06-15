@@ -59,4 +59,12 @@ It simply appends a set of mkv files into one mkv via mkvmerge.
 
 Along with that it also asks the user for custom chapter names for each mkv file.
 
+## 2D to 3D Subtitle Convertion Scripts
+
+`3d-misc` has a bunch of WIP scripts that are basically ported code from
+the program BD3D2MK3D which is written 'tcl'.  I'm working on porting some
+of the subtitle related stuff to Python.  The only problem is that they require
+3D-Plane files with can only be obtained by `MVCPlanes2OFS.exe` which is
+available in BD3D2MK3D's toolset folder.  I'll ask to see if the source is available.
+
 #### Usage for these scripts are in their respective folders.
