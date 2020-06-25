@@ -59,6 +59,9 @@ It simply appends a set of mkv files into one mkv via mkvmerge.
 
 Along with that it also asks the user for custom chapter names for each mkv file.
 
+## ffmpeg Slideshow.
+`slideshow` has a script that creates a 720p picture slideshow using ffmpeg.
+
 ## 2D to 3D Subtitle Convertion Scripts
 
 `3d-misc` has a bunch of WIP scripts that are basically ported code from
