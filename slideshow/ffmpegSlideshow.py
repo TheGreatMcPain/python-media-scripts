@@ -20,17 +20,19 @@ FFMPEGPATH = 'ffmpeg'
 
 
 def main():
-    displaySec = sys.argv[1]
-    outputFile = sys.argv[2]
+    width = sys.argv[1]
+    height = sys.argv[2]
+    displaySec = sys.argv[3]
+    outputFile = sys.argv[4]
     images = []
     for f in os.listdir('.'):
         if 'JPG' in f or 'jpg' in f:
             images.append(f)
 
-    FFmpegCmd(images, displaySec, outputFile)
+    FFmpegCmd(images, width, height, displaySec, outputFile)
 
 
-def FFmpegCmd(images, displaySec, output):
+def FFmpegCmd(images, width, height, displaySec, output):
     cmd = [FFMPEGPATH]
 
     # Get Input images.
@@ -46,13 +48,19 @@ def FFmpegCmd(images, displaySec, output):
 
     # Build filter_complex string.
     for x in range(0, len(images)):
-        filterStr += '[' + str(
-            x) + ':v]fade=t=in:st=0:d=1,fade=t=out:st=4:d=1[v' + str(x) + ']; '
+        filterStr += '[' + str(x) + ':v]scale=' + str(width) + ':' + str(
+            height) + ':'
+        filterStr += 'force_original_aspect_ratio=decrease,pad='
+        filterStr += str(width) + ':' + str(height) + ':(ow-iw)/2:(oh-ih)/2'
+        filterStr += ',setsar=1,'
+        filterStr += 'fade=t=in:st=0:d=1,fade=t=out:st=' + str(
+            int(displaySec) - 1)
+        filterStr += ':d=1[v' + str(x) + ']; '
 
     for x in range(0, len(images)):
         filterStr += '[v' + str(x) + ']'
     filterStr += 'concat=n=' + str(len(images))
-    filterStr += ':v=1:a=0,format=yuv420p,scale=-1:720[v]'
+    filterStr += ':v=1:a=0,format=yuv420p[v]'
 
     cmd.append(filterStr)
 
