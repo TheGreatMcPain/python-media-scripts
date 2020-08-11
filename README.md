@@ -62,6 +62,10 @@ Along with that it also asks the user for custom chapter names for each mkv file
 ## ffmpeg Slideshow.
 `slideshow` has a script that creates a 720p picture slideshow using ffmpeg.
 
+## NativeDSD to FLAC batch convert.
+`dsd-to-flac` has a script that copies a directory containing DSF/DSD files,
+and converts the DSD files to FLAC via ffmpeg.
+
 ## 2D to 3D Subtitle Convertion Scripts
 
 `3d-misc` has a bunch of WIP scripts that are basically ported code from
