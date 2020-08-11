@@ -5,9 +5,7 @@ The codec settings can be changed at the bottom of the script.
 At the moment it just encodes to libx264 with...
 (-preset veryfast, -tune stillimage, -crf 15)
 
-The resulting video will be 720p.
-
-Usage: <script> <display time in seconds> <outputfile>
+Usage: <script> <width> <height> <display time in seconds> <outputfile>
 
 The filter_complex chain comes from...
 https://superuser.com/questions/833232/create-video-with-5-images-with-fadein-out-effect-in-ffmpeg/834035#834035
@@ -26,7 +24,7 @@ def main():
     outputFile = sys.argv[4]
     images = []
     for f in os.listdir('.'):
-        if 'JPG' in f or 'jpg' in f:
+        if 'jpg' in f.lower() or 'jpeg' in f.lower():
             images.append(f)
 
     FFmpegCmd(images, width, height, displaySec, outputFile)
@@ -66,8 +64,8 @@ def FFmpegCmd(images, width, height, displaySec, output):
 
     # Output file format.
     cmd += [
-        '-map', '[v]', '-vcodec', 'libx264', '-preset', 'veryfast', '-tune',
-        'stillimage', '-crf', '15', output
+        '-map', '[v]', '-vcodec', 'libx264', '-preset', 'veryfast', '-crf',
+        '15', '-x264-params', 'qcomp=0.8', output
     ]
 
     # Print ffmpeg command to stdout.
