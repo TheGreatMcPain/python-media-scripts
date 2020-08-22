@@ -15,8 +15,15 @@ ps.nice(15)
 INFOFILE = 'info.json'
 RESUME = 'resume-file'
 
-BDSUP2SUB = ['/usr/bin/java', '-jar', '~/.local/share/bdsup2sub/BDSup2Sub.jar']
+# BDSup2Sub Settings #
+# Use java version
+# BDSUP2SUB = ['/usr/bin/java', '-jar',
+#              '~/.local/share/bdsup2sub/BDSup2Sub.jar']
+# Use C++ version
+BDSUP2SUB = ['bdsup2sub++']
 
+# This is a maximum volume level the nightmode tracks will have. (in dB).
+# 0.0 would be the highest without clipping.
 MAXDB = '-0.5'
 
 
