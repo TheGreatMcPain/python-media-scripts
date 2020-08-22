@@ -7,27 +7,17 @@ The `info.json` file contains information about the video which
 will determine the resulting video file.
 
 To be more flexable without having to modify the script itself
-the`info.json` also requires `x264opts` which contains arguments for
-`x264`. The script will read them like this.
-```
-x264 --demuxer y4m <your x264opts will be here> --frames <num of frames> --output video.mkv -
-```
+the`info.json` also requires an encoding command, `encodingcmd`, which
+will contain the command that will reencode the file.
 
-Along with `x264opts` there is also the `vapoursynth` option.
-This option contains python code related to VapourSynth.
-Make sure to name each clip `video` when writting your own VapourSynth code.
+"Must be able to take `stdin`, and must output as `video.mkv`"
 
-Also the script will run these lines of code automatically.
-```
-import vapoursynth as vs
-core = vs.core
-```
+The script requires a vapoursynth script named `video.py`.
+An example script is available for reference. This script will be imported
+as a module by `batchconvert.py`, and call the function `vapoursynthFilter`.
+The script will also call `getVSCore`, so that it doesn't have to import vapoursynth.
 
 The script will also handle hardcoding forced subtitles via VapourSynth automatically.
-
-Not sure if I'll keep the `vapoursynth` option, or make it a separate file
-that sits next to the `info.json` file.\
-(Might be easier for more complex vapoursynth scripts)
 
 #### There's an example `info.json` in this folder.
 
@@ -37,8 +27,10 @@ Example directory structure:
 ```
 bloopers/source.mkv
 bloopers/info.json
+bloopers/video.py
 deleted-scenes/source.mkv
 deleted-scenes/info.json
+deleted-scenes/video.py
 batchconvert.py
 ```
 
