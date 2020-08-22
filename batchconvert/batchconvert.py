@@ -15,8 +15,7 @@ ps.nice(15)
 INFOFILE = 'info.json'
 RESUME = 'resume-file'
 
-JAVA = "/usr/bin/java"
-BDSUP2SUB = "~/.local/share/bdsup2sub/BDSup2Sub.jar"
+BDSUP2SUB = ['/usr/bin/java', '-jar', '~/.local/share/bdsup2sub/BDSup2Sub.jar']
 
 MAXDB = '-0.5'
 
@@ -180,7 +179,6 @@ def encodeVideo(info):
 
 
 def prepForcedSubs(info):
-    bdsup2sub = os.path.expanduser(BDSUP2SUB)
     if "subs" in info:
         subs = info['subs']
     else:
@@ -191,8 +189,9 @@ def prepForcedSubs(info):
             print("Subtitles doesn't exist!")
             return 0
 
-        cmd = [
-            JAVA, '-jar', bdsup2sub, '--forced-only', '--output',
+        cmd = BDSUP2SUB
+        cmd += [
+            '--forced-only', '--output',
             'subtitles-forced-' + track['id'] + '.sup',
             'subtitles-' + track['id'] + '.sup'
         ]
@@ -204,8 +203,9 @@ def prepForcedSubs(info):
             sourceFile = 'subtitles-' + track['id'] + '.sup'
             os.mkdir('subtitles')
             os.chdir('subtitles')
-            cmd = [
-                JAVA, '-jar', bdsup2sub, '--output', 'subtitles.xml',
+            cmd = BDSUP2SUB
+            cmd += [
+                '--output', 'subtitles.xml',
                 os.path.join('..', sourceFile)
             ]
             print("Exporting to BDXML.")
@@ -223,16 +223,17 @@ def prepForcedSubs(info):
             tree.write('subtitles-new.xml')
             os.chdir("..")
             print("Exporting to", sourceFile)
-            cmd = [
-                JAVA, '-jar', bdsup2sub, '--forced-only', '--output',
-                'subtitles-temp.sup',
+            cmd = BDSUP2SUB
+            cmd += [
+                '--forced-only', '--output', 'subtitles-temp.sup',
                 os.path.join('subtitles', 'subtitles-new.xml')
             ]
             p = sp.Popen(cmd, stdout=sp.DEVNULL, stderr=sp.DEVNULL)
             p.communicate()
-            cmd = [
-                JAVA, '-jar', bdsup2sub, '--force-all', 'clear', '--output',
-                sourceFile, 'subtitles-temp.sup'
+            cmd = BDSUP2SUB
+            cmd += [
+                '--force-all', 'clear', '--output', sourceFile,
+                'subtitles-temp.sup'
             ]
             p = sp.Popen(cmd, stdout=sp.DEVNULL, stderr=sp.DEVNULL)
             p.communicate()
