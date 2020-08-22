@@ -5,19 +5,13 @@
     "video": {
         "title": "1080p (H264)",
         "language": "eng",
-        "vapoursynth": [
-            "import havsfunc as haf",
-            "core.ffms2.Source(source=SOURCEFILE)",
-            "core.std.CropRel(video, top=140, bottom=140)",
-            "haf.GSMC(video, thSAD=150, radius=2)",
-            "core.f3kdb.Deband(video, dynamic_grain=True, preset='Low')",
-            "core.std.AddBorders(video, top=140, bottom=140)"
-        ],
-        "x264opts": [
+        "encodecmd": [
+            "x264", "--demuxer", "y4m",
             "--preset", "veryslow", "--tune", "film",
             "--level", "4.1", "--crf", "16", "--qcomp", "0.7",
             "--input-range", "tv", "--range", "tv",
-            "--colorprim", "bt709", "--transfer", "bt709", "--colormatrix", "bt709"
+            "--colorprim", "bt709", "--transfer", "bt709", "--colormatrix", "bt709",
+            "--frames", "FRAMECOUNT", "--output", "video.mkv", "-"
         ]
     },
     "audio": [{

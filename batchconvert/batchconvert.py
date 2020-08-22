@@ -152,18 +152,11 @@ def mergeMKV(info):
 
 def encodeVideo(info):
     sourceFile = info['sourceFile']
-    vpy = info['video']['vapoursynth']
 
     # VapourSynth stuff
-    import vapoursynth as vs
-    core = vs.core
-    for func in vpy:
-        if 'SOURCEFILE' in func:
-            func = func.replace('SOURCEFILE', "'" + sourceFile + "'")
-        if 'import' in func:
-            exec(func)
-        else:
-            video = eval(func)
+    import video
+    video = video.vapoursynthFilter(sourceFile)
+    core = video.getVSCore()
 
     for sub in info['subs']:
         supFile = 'subtitles-forced-' + sub['id'] + '.sup'
@@ -172,9 +165,9 @@ def encodeVideo(info):
             video = core.sub.ImageFile(video, supFile)
             break
 
-    cmd = ['x264', '--demuxer', 'y4m']
-    cmd += info['video']['x264opts']
-    cmd += ['--frames', str(video.num_frames), '--output', 'video.mkv', '-']
+    cmd = info['video']['encodecmd']
+
+    cmd[cmd.index('FRAMECOUNT')] = str(video.num_frames)
 
     for x in cmd:
         print(x, end=' ')
