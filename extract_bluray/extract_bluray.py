@@ -71,7 +71,7 @@ def getBluRayFilePath(BluRayDir, fileName):
     """
     ext = fileName.split('.')[-1]
     if 'm2ts' in ext:
-        filePath = os.path.join(BluRayDir, "BDMV/STREAMS", fileName)
+        filePath = os.path.join(BluRayDir, "BDMV/STREAM", fileName)
     if 'mpls' in ext:
         filePath = os.path.join(BluRayDir, "BDMV/PLAYLIST", fileName)
 
