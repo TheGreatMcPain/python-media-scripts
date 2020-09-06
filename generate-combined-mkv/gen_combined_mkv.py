@@ -51,6 +51,7 @@ def getDirsMkvs(sourceFile):
             mkvpath = os.path.join(x, sourceFile)
             if os.path.isfile(mkvpath):
                 dirs.append(x)
+    dirs.sort()
     return dirs
 
 
