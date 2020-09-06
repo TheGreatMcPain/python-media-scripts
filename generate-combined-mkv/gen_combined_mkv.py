@@ -72,10 +72,12 @@ def createMKV(dirs, sourceFile, outFile):
     """
     cmd = ['mkvmerge', '--output', outFile]
 
+    cmd.append('--no-chapters')
     cmd.append(os.path.join(dirs[0], sourceFile))
 
     for folder in dirs[1:]:
         mkvfile = os.path.join(folder, sourceFile)
+        cmd.append('--no-chapters')
         cmd.append('+' + mkvfile)
 
     # Have mkvmerge generate a chapter entry for each file it appends.
