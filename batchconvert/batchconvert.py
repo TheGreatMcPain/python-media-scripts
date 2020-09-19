@@ -154,9 +154,9 @@ def encodeVideo(info):
     sourceFile = info['sourceFile']
 
     # VapourSynth stuff
-    import video
-    video = video.vapoursynthFilter(sourceFile)
-    core = video.getVSCore()
+    import vpyScript
+    core = vpyScript.getVSCore()
+    video = vpyScript.vapoursynthFilter(sourceFile)
 
     for sub in info['subs']:
         supFile = 'subtitles-forced-' + sub['id'] + '.sup'

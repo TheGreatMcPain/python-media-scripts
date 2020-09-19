@@ -12,7 +12,7 @@ will contain the command that will reencode the file.
 
 "Must be able to take `stdin`, and must output as `video.mkv`"
 
-The script requires a vapoursynth script named `video.py`.
+The script requires a vapoursynth script named `vpyScript.py`.
 An example script is available for reference. This script will be imported
 as a module by `batchconvert.py`, and call the function `vapoursynthFilter`.
 The script will also call `getVSCore`, so that it doesn't have to import vapoursynth.
