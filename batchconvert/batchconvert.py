@@ -3,13 +3,13 @@ import json
 import os
 import shutil
 import time
-import psutil
+import psutil  # Comment out of not using psutil
 import subprocess as sp
 import xml.etree.cElementTree as ET
 
 # Set niceness (I wanna play games dammit)
-ps = psutil.Process(os.getpid())
-ps.nice(15)
+ps = psutil.Process(os.getpid())  # Comment out if not using psutil
+ps.nice(15)  # Comment out of not using psutil
 
 # Globals
 INFOFILE = 'info.json'

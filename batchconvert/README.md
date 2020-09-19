@@ -36,3 +36,11 @@ batchconvert.py
 
 If you have `batchconvert.py` in the same directory as an `info.json` the script
 will only convert one file.
+
+# Requirements (I think I got all of them.)
+
+* mkvtoolnix
+* ffmpeg
+* bdsup2sub (or bdsup2sub++) "The script needs to know where bdsup2sub is at."
+* VapourSynth
+* psutil (Only used for setting cpu priority)
