@@ -8,3 +8,7 @@ $ ./ffmpegSlideshow.py \<width\> \<height\> \<display time in seconds\> \<output
 
 It's currently hard-coded to encode the video with libx264 with...
 (-preset veryfast, -tune stillimage, -crf 15)
+
+## Requirements
+
+* ffmpeg (if it wasn't obvious)
