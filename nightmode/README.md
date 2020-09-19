@@ -36,3 +36,8 @@ and the speed of your storage device.
 * Instead of asking about each file, ask for global settings, then if a file
 has a different number of tracks from the rest ask for input.
 (this will be nice for shows that have commentary tracks in a few episodes)
+
+## Requirements
+
+* ffmpeg
+* mkvtoolnix
