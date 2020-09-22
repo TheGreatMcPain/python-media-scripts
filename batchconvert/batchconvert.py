@@ -6,6 +6,7 @@ import time
 import psutil  # Comment out of not using psutil
 import subprocess as sp
 import xml.etree.cElementTree as ET
+from encodeInfo import encodeInfo
 
 # Set niceness (I wanna play games dammit)
 ps = psutil.Process(os.getpid())  # Comment out if not using psutil
@@ -96,11 +97,14 @@ def readResume():
 def mergeMKV(info):
     title = info['title']
     output = info['outputFile']
+    sourceFile = info['sourceFile']
+    videoInfo = encodeInfo(sourceFile)
+    videoInputFile = videoInfo.getEncodeFile()
 
     cmd = [
         'mkvmerge', '--output', output, '--title', title, '--track-name',
         '0:' + info['video']['title'], '--language',
-        '0:' + info['video']['language'], 'video.mkv'
+        '0:' + info['video']['language'], videoInputFile
     ]
 
     for track in info['audio']:
@@ -154,9 +158,10 @@ def encodeVideo(info):
     sourceFile = info['sourceFile']
 
     # VapourSynth stuff
-    import vpyScript
-    core = vpyScript.getVSCore()
-    video = vpyScript.vapoursynthFilter(sourceFile)
+    videoInfo = encodeInfo(sourceFile)
+
+    core = videoInfo.getVSCore()
+    video = videoInfo.vapoursynthFilter()
 
     for sub in info['subs']:
         supFile = 'subtitles-forced-' + sub['id'] + '.sup'
@@ -165,9 +170,7 @@ def encodeVideo(info):
             video = core.sub.ImageFile(video, supFile)
             break
 
-    cmd = info['video']['encodecmd']
-
-    cmd[cmd.index('FRAMECOUNT')] = str(video.num_frames)
+    cmd = videoInfo.getEncodeCmd()
 
     for x in cmd:
         print(x, end=' ')
