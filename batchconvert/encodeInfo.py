@@ -12,6 +12,8 @@ without cluttering up the main script.
 """
 
 VIDEO_ENCODE_NAME = 'video.mkv'
+# Change this to get VapourSynth's buffer size. (in MB)
+VSCORE_MEM_CACHE_MAX = None
 
 
 class encodeInfo:
@@ -19,6 +21,8 @@ class encodeInfo:
         self.sourcefile = sourcefile
 
     def vapoursynthFilter(self):
+        if VSCORE_MEM_CACHE_MAX is not None:
+            core.max_cache_size = VSCORE_MEM_CACHE_MAX
         video = core.ffms2.Source(source=self.sourcefile)
         video = core.std.CropRel(video, top=140, bottom=140)
         video = haf.GSMC(video, thSAD=150, radius=2)
