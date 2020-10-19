@@ -34,7 +34,7 @@ class encodeInfo:
         return core
 
     def getEncodeCmd(self):
-        framecount = self.vapoursynthFilter(self.sourcefile).num_frames
+        framecount = self.vapoursynthFilter().num_frames
         cmd = [
             "x264", "--demuxer", "y4m", "--preset", "veryslow", "--tune",
             "film", "--level", "4.1", "--crf", "16", "--qcomp", "0.7",
