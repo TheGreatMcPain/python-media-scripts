@@ -11,4 +11,10 @@ It's currently hard-coded to encode the video with libx264 with...
 
 ## Requirements
 
-* ffmpeg (if it wasn't obvious)
+- ffmpeg (if it wasn't obvious)
+
+## Example command
+
+```
+./ffmpegSlideshow.py 1024 682 5 slideshow-14.mkv
+```
