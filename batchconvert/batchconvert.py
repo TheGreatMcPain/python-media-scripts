@@ -2,10 +2,12 @@
 import json
 import os
 import shutil
-import time
-import psutil  # Comment out of not using psutil
 import subprocess as sp
+import time
 import xml.etree.cElementTree as ET
+
+import psutil  # Comment out of not using psutil
+
 from encodeInfo import encodeInfo
 
 # Set niceness (I wanna play games dammit)
