@@ -104,7 +104,7 @@ def replaceNightmode(workDict):
         print("I'll wait 15 seconds before continuing", end='')
         print(", but if you want me to continue press CTRL-C.")
         try:
-            for i in range(0, 30):
+            for range(0, 30):
                 sleep(1)
             print("No input... continuing.")
         except KeyboardInterrupt:
