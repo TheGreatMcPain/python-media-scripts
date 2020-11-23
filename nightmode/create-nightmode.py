@@ -37,6 +37,10 @@ def main():
         Usage()
         sys.exit(1)
 
+    if len(args) > 0:
+        print("Error: Trailing arguments")
+        sys.exit(1)
+
     ext = fileIn.split('.')[-1]
 
     createNightmodeTracks(codec, ext, fileIn)
