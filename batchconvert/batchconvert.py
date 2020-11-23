@@ -165,12 +165,13 @@ def encodeVideo(info):
     core = videoInfo.getVSCore()
     video = videoInfo.vapoursynthFilter()
 
-    for sub in info['subs']:
-        supFile = 'subtitles-forced-' + sub['id'] + '.sup'
-        if os.path.isfile(supFile):
-            print("Hardcoding Forced Subtitle id:", sub['id'])
-            video = core.sub.ImageFile(video, supFile)
-            break
+    if 'subs' in info:
+        for sub in info['subs']:
+            supFile = 'subtitles-forced-' + sub['id'] + '.sup'
+            if os.path.isfile(supFile):
+                print("Hardcoding Forced Subtitle id:", sub['id'])
+                video = core.sub.ImageFile(video, supFile)
+                break
 
     cmd = videoInfo.getEncodeCmd()
 
