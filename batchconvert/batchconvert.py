@@ -180,7 +180,7 @@ def encodeVideo(info):
     print()
 
     p = sp.Popen(cmd, stdin=sp.PIPE)
-    video.output(p.stdin)
+    video.output(p.stdin, y4m=True)
     p.communicate()
 
 

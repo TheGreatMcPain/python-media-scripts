@@ -43,14 +43,12 @@ class encodeInfo:
     def getEncodeCmd(self):
         video = self.vapoursynthFilter()
         framecount = str(video.num_frames)
-        fps = str(video.fps)
-        resolution = str(video.width) + "x" + str(video.height)
         cmd = [
-            "x264", "--preset", "veryslow", "--tune",
+            "x264", "--demuxer", "y4m", "--preset", "veryslow", "--tune",
             "film", "--level", "4.1", "--crf", "16", "--qcomp", "0.7",
             "--input-range", "tv", "--range", "tv", "--colorprim", "bt709",
-            "--transfer", "bt709", "--colormatrix", "bt709", "--input-res", resolution,
-            "--fps", fps, "--frames", framecount, "--output", VIDEO_ENCODE_NAME, "-"
+            "--transfer", "bt709", "--colormatrix", "bt709", "--frames",
+            framecount, "--output", VIDEO_ENCODE_NAME, "-"
         ]
         return cmd
 

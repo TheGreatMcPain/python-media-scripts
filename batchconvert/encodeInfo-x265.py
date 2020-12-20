@@ -11,7 +11,7 @@ without cluttering up the main script.
 "batchencode will call 'vapoursynthFilter' just to be clear."
 """
 
-VIDEO_ENCODE_NAME = 'video.mkv'
+VIDEO_ENCODE_NAME = 'video.h265'
 # Change this to get VapourSynth's buffer size. (in MB)
 VSCORE_MEM_CACHE_MAX = 1024
 
@@ -36,13 +36,10 @@ class encodeInfo:
     def getEncodeCmd(self):
         video = self.vapoursynthFilter()
         framecount = video.num_frames
-        fps = str(video.fps)
-        resolution = str(video.width) + "x" + str(video.height)
         cmd = [
-            'x265', '--preset', 'medium', '--crf', '16', '--qcomp', '0.75',
-            '--output-depth', '10', '--range', 'limited', '--colorprim',
-            'bt709', '--transfer', 'bt709', '--input-res', resolution, '--fps',
-            fps, '--frames',
+            'x265', '--y4m', '--preset', 'medium', '--crf', '16', '--qcomp',
+            '0.75', '--output-depth', '10', '--range', 'limited',
+            '--colorprim', 'bt709', '--transfer', 'bt709', '--frames',
             str(framecount), '--input', '-', '--output', VIDEO_ENCODE_NAME
         ]
         return cmd
