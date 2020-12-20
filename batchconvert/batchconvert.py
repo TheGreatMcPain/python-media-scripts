@@ -4,6 +4,7 @@ import os
 import shutil
 import subprocess as sp
 import time
+import threading
 import xml.etree.cElementTree as ET
 
 import psutil  # Comment out of not using psutil
@@ -157,6 +158,18 @@ def mergeMKV(info):
 
 
 def encodeVideo(info):
+    encodeThreadDone = False
+    encodeThreadProc = None
+
+    # Encode thread Function
+    def encodeThread(video, cmd):
+        nonlocal encodeThreadDone
+        nonlocal encodeThreadProc
+        encodeThreadProc = sp.Popen(cmd, stdin=sp.PIPE)
+        video.output(encodeThreadProc.stdin, y4m=True)
+        encodeThreadProc.wait()
+        encodeThreadDone = True
+
     sourceFile = info['sourceFile']
 
     # VapourSynth stuff
@@ -179,9 +192,17 @@ def encodeVideo(info):
         print(x, end=' ')
     print()
 
-    p = sp.Popen(cmd, stdin=sp.PIPE)
-    video.output(p.stdin, y4m=True)
-    p.communicate()
+    # Start encode thread
+    t = threading.Thread(target=encodeThread, args=(video, cmd))
+    t.start()
+
+    # Terminate encodeThreadProc when CTRL-C is used.
+    try:
+        while not encodeThreadDone:
+            time.sleep(0.1)
+
+    except KeyboardInterrupt:
+        encodeThreadProc.terminate()
 
 
 def prepForcedSubs(info):
