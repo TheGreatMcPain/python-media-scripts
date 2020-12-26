@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import json
 import os
+import sys
 import shutil
 import subprocess as sp
 import time
@@ -9,7 +10,7 @@ import xml.etree.cElementTree as ET
 
 import psutil  # Comment out of not using psutil
 
-from encodeInfo import encodeInfo
+import encodeInfo
 
 # Set niceness (I wanna play games dammit)
 ps = psutil.Process(os.getpid())  # Comment out if not using psutil
@@ -46,12 +47,26 @@ def main():
                     folders.append(x)
 
         for folder in folders:
+            # Check if a 'encodeInfo.py' file exists.
+            encodeInfoFile = os.path.join(folder, "encodeInfo.py")
+            if os.path.isfile(encodeInfo):
+                # if it does override the previous import.
+                del sys.modules['encodeInfo']
+                sys.path.insert(
+                    0, os.path.dirname(os.path.abspath(encodeInfoFile)))
+                import encodeInfo
+                sys.path.remove(
+                    os.path.dirname(os.path.abspath(encodeInfoFile)))
             os.chdir(folder)
             index = folders.index(folder)
             total = len(folders)
             print(index, "out of", total, "done.\n")
             convertMKV(INFOFILE)
             os.chdir("..")
+
+            # Reimport encodeInfo module from current directory.
+            del sys.modules['encodeInfo']
+            import encodeInfo
 
 
 def convertMKV(infoFile):
@@ -101,7 +116,7 @@ def mergeMKV(info):
     title = info['title']
     output = info['outputFile']
     sourceFile = info['sourceFile']
-    videoInfo = encodeInfo(sourceFile)
+    videoInfo = encodeInfo.encodeInfo(sourceFile)
     videoInputFile = videoInfo.getEncodeFile()
 
     cmd = [
@@ -173,7 +188,7 @@ def encodeVideo(info):
     sourceFile = info['sourceFile']
 
     # VapourSynth stuff
-    videoInfo = encodeInfo(sourceFile)
+    videoInfo = encodeInfo.encodeInfo(sourceFile)
 
     core = videoInfo.getVSCore()
     video = videoInfo.vapoursynthFilter()
