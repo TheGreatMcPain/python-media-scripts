@@ -167,7 +167,7 @@ def encodeVideo(info):
         nonlocal encodeThreadProc
         encodeThreadProc = sp.Popen(cmd, stdin=sp.PIPE)
         video.output(encodeThreadProc.stdin, y4m=True)
-        encodeThreadProc.wait()
+        encodeThreadProc.communicate()
         encodeThreadDone = True
 
     sourceFile = info['sourceFile']
@@ -203,6 +203,7 @@ def encodeVideo(info):
 
     except KeyboardInterrupt:
         encodeThreadProc.terminate()
+        exit(0)
 
 
 def prepForcedSubs(info):
