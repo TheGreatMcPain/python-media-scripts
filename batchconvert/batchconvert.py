@@ -49,7 +49,7 @@ def main():
         for folder in folders:
             # Check if a 'encodeInfo.py' file exists.
             encodeInfoFile = os.path.join(folder, "encodeInfo.py")
-            if os.path.isfile(encodeInfo):
+            if os.path.isfile(encodeInfoFile):
                 # if it does override the previous import.
                 del sys.modules['encodeInfo']
                 sys.path.insert(
