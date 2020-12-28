@@ -49,12 +49,17 @@ def main():
         for folder in folders:
             # Check if a 'encodeInfo.py' file exists.
             encodeInfoFile = os.path.join(folder, "encodeInfo.py")
+            # If it exists override the previous 'encodeInfo'
             if os.path.isfile(encodeInfoFile):
-                # if it does override the previous import.
+                global encodeInfo
+                # Delete the old 'encodeInfo' import
                 del sys.modules['encodeInfo']
+                # insert the path to 'encodeInfoFile' in system PATH
                 sys.path.insert(
                     0, os.path.dirname(os.path.abspath(encodeInfoFile)))
-                import encodeInfo
+                # Import the new 'encodeInfo' into our global imports
+                globals()['encodeInfo'] = __import__('encodeInfo')
+                # Cleanup the system PATH
                 sys.path.remove(
                     os.path.dirname(os.path.abspath(encodeInfoFile)))
             os.chdir(folder)
@@ -64,9 +69,9 @@ def main():
             convertMKV(INFOFILE)
             os.chdir("..")
 
-            # Reimport encodeInfo module from current directory.
+            # Reimport the "global" 'encodeInfo'
             del sys.modules['encodeInfo']
-            import encodeInfo
+            globals()['encodeInfo'] = __import__('encodeInfo')
 
 
 def convertMKV(infoFile):
