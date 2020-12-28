@@ -126,7 +126,7 @@ def mergeMKV(info):
     ]
 
     if 'mkvmergeOpts' in info['video']:
-        cmd += info['mkvmergeOpts']
+        cmd += info['video']['mkvmergeOpts']
     cmd.append(videoInputFile)
 
     for track in info['audio']:
