@@ -82,26 +82,26 @@ def convertMKV(infoFile):
 
     info = getInfo(infoFile)
 
-    if "juststarted" in status:
+    if "juststarted" == status:
         extractTracks(info)
         status = writeResume("extracted")
         print()
-    if "extracted" in status:
+    if "extracted" == status:
         createNightmodeTracks(info)
         status = writeResume("nightmode")
         print()
-    if "nightmode" in status:
+    if "nightmode" == status:
         prepForcedSubs(info)
         print()
         encodeVideo(info)
         status = writeResume("encoded")
         print()
-    if "encoded" in status:
+    if "encoded" == status:
         mergeMKV(info)
         os.rename(info['outputFile'], os.path.join("..", info['outputFile']))
         status = writeResume("merged")
         print()
-    if "merged" in status:
+    if "merged" == status:
         print("Done")
 
 
@@ -113,7 +113,8 @@ def writeResume(status):
 
 def readResume():
     with open(RESUME, 'r') as f:
-        status = f.readlines()
+        # Read first line in file and strip unneeded charaters.
+        status = f.readline().strip()
     return status
 
 
