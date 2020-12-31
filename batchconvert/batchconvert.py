@@ -19,6 +19,7 @@ ps.nice(15)  # Comment out of not using psutil
 
 # Globals
 INFOFILE = 'info.json'
+ENCODEINFO = 'encodeInfo.py'
 RESUME = 'resume-file'
 
 # BDSup2Sub Settings #
@@ -34,48 +35,76 @@ MAXDB = '-0.5'
 
 
 def main():
+    folders = []
     lsdir = os.listdir('.')
     if INFOFILE in lsdir:
-        print(INFOFILE, "found in current directory.")
-        print("We'll only convert one mkv file.\n")
-        convertMKV(INFOFILE)
+        folders.append('.')
+        if len(sys.argv) == 1:
+            print(INFOFILE, "found in current directory.")
+            print("We'll only convert one mkv file.\n")
+            convertMKV(INFOFILE)
     else:
-        folders = []
         for x in lsdir:
             if os.path.isdir(x):
                 infoPath = os.path.join(x, INFOFILE)
                 if os.path.isfile(infoPath):
                     folders.append(x)
 
-        for folder in folders:
-            # Check if a 'encodeInfo.py' file exists.
-            encodeInfoFile = os.path.join(folder, "encodeInfo.py")
-            # If it exists override the previous 'encodeInfo'
-            if os.path.isfile(encodeInfoFile):
-                global encodeInfo
-                # Delete the old 'encodeInfo' import
-                del sys.modules['encodeInfo']
-                # insert the path to 'encodeInfoFile' in system PATH
-                sys.path.insert(
-                    0, os.path.dirname(os.path.abspath(encodeInfoFile)))
-                # Import the new 'encodeInfo' into our global imports
-                globals()['encodeInfo'] = __import__('encodeInfo')
-                # Cleanup the system PATH
-                sys.path.remove(
-                    os.path.dirname(os.path.abspath(encodeInfoFile)))
-            os.chdir(folder)
-            index = folders.index(folder)
-            total = len(folders)
-            print(index, "out of", total, "done.\n")
-            convertMKV(INFOFILE)
-            os.chdir("..")
+        if len(sys.argv) == 1:
+            for folder in folders:
+                # Check if a 'encodeInfo.py' file exists.
+                encodeInfoFile = os.path.join(folder, ENCODEINFO)
+                # If it exists override the previous 'encodeInfo'
+                if os.path.isfile(encodeInfoFile):
+                    global encodeInfo
+                    # Delete the old 'encodeInfo' import
+                    del sys.modules['encodeInfo']
+                    # insert the path to 'encodeInfoFile' in system PATH
+                    sys.path.insert(
+                        0, os.path.dirname(os.path.abspath(encodeInfoFile)))
+                    # Import the new 'encodeInfo' into our global imports
+                    globals()['encodeInfo'] = __import__('encodeInfo')
+                    # Cleanup the system PATH
+                    sys.path.remove(
+                        os.path.dirname(os.path.abspath(encodeInfoFile)))
+                os.chdir(folder)
+                index = folders.index(folder)
+                total = len(folders)
+                print(index, "out of", total, "done.\n")
+                convertMKV(INFOFILE)
+                os.chdir("..")
 
-            # Reimport the "global" 'encodeInfo'
-            del sys.modules['encodeInfo']
-            globals()['encodeInfo'] = __import__('encodeInfo')
+                # Reimport the "global" 'encodeInfo'
+                del sys.modules['encodeInfo']
+                globals()['encodeInfo'] = __import__('encodeInfo')
 
     print("Cleaning python cache files.")
     cleanPythonCache('.')
+
+    if len(sys.argv) == 2:
+        if '--clean' == sys.argv[1]:
+            exclude = [os.path.basename(__file__), INFOFILE, ENCODEINFO]
+            print("\nCleaning temp files")
+            for folder in folders:
+                infoPath = os.path.join(folder, INFOFILE)
+                info = getInfo(infoPath)
+                exclude.append(info['sourceFile'])
+                deleteList = list(set(os.listdir(folder)) - set(exclude))
+                for file in deleteList:
+                    filePath = os.path.join(folder, file)
+                    print("Deleting:", filePath)
+                    os.remove(filePath)
+                exclude.remove(info['sourceFile'])
+
+        if '--clean-sources' == sys.argv[1]:
+            print("\nCleaning source video files")
+            for folder in folders:
+                infoPath = os.path.join(folder, INFOFILE)
+                info = getInfo(infoPath)
+                path = os.path.join(folder, info['sourceFile'])
+                if os.path.exists(path):
+                    print("Deleting:", path)
+                    os.remove(path)
 
 
 def convertMKV(infoFile):
