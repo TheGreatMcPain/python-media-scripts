@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import json
 import os
+import pathlib
 import sys
 import shutil
 import subprocess as sp
@@ -72,6 +73,9 @@ def main():
             # Reimport the "global" 'encodeInfo'
             del sys.modules['encodeInfo']
             globals()['encodeInfo'] = __import__('encodeInfo')
+
+    print("Cleaning python cache files.")
+    cleanPythonCache('.')
 
 
 def convertMKV(infoFile):
@@ -475,6 +479,23 @@ def getInfo(infoFile):
         print("Error: 'info.json' not found.")
 
     return info
+
+
+# Based on this: https://code-examples.net/en/q/1ba5e27
+def cleanPythonCache(path):
+    if not os.path.isdir(path):
+        print(path, "doesn't exist, or isn't a directory.")
+        exit(1)
+
+    # Search and delete .pyc and .pyo files
+    for p in pathlib.Path(path).rglob('*.py[co]'):
+        print("Deleting:", p)
+        p.unlink()
+
+    # Search and delete '__pycache__' directories
+    for p in pathlib.Path(path).rglob('__pycache__'):
+        print("Deleting:", p)
+        p.rmdir()
 
 
 if __name__ == "__main__":
