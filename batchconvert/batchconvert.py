@@ -13,9 +13,8 @@ import psutil  # Comment out of not using psutil
 
 import encodeInfo
 
-# Set niceness (I wanna play games dammit)
-ps = psutil.Process(os.getpid())  # Comment out if not using psutil
-ps.nice(15)  # Comment out of not using psutil
+# Set process niceness (Priority)
+psutil.Process(os.getpid()).nice(15)  # Comment out if not using psutil
 
 # Globals
 INFOFILE = 'info.json'
@@ -505,7 +504,7 @@ def getInfo(infoFile):
     try:
         info = json.load(open(infoFile, 'r'))
     except IOError:
-        print("Error: 'info.json' not found.")
+        print("Error:", infoFile, "not found.")
 
     return info
 
