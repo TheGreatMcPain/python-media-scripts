@@ -206,9 +206,7 @@ def mergeMKV(info):
     if os.path.isfile('chapters.xml'):
         cmd += ['--chapters', 'chapters.xml']
 
-    for x in cmd:
-        print(x, end=' ')
-    print()
+    print(" ".join(cmd))
 
     p = sp.Popen(cmd)
     p.communicate()
@@ -256,9 +254,7 @@ def encodeVideo(info):
 
     cmd = videoInfo.getEncodeCmd()
 
-    for x in cmd:
-        print(x, end=' ')
-    print()
+    print(" ".join(cmd))
 
     # Start encode thread
     t = threading.Thread(target=encodeThread, args=(video, cmd))
@@ -382,9 +378,7 @@ def ffmpegAudio(cmd, inFile, trackid):
         print(duration)
     else:
         print(tags['DURATION-eng'])
-    for x in cmd:
-        print(x, end=' ')
-    print()
+    print(" ".join(cmd))
     p = sp.Popen(cmd,
                  stderr=sp.STDOUT,
                  stdout=sp.PIPE,
@@ -504,9 +498,7 @@ def extractTracks(info):
     cmd += ['chapters', 'chapters.xml']
 
     print("\nExtracting tracks via mkvextract.")
-    for x in cmd:
-        print(x, end=' ')
-    print()
+    print(" ".join(cmd))
     p = sp.Popen(cmd)
     p.communicate()
 
