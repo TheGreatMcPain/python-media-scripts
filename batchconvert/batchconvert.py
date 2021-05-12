@@ -229,17 +229,10 @@ def encodeVideo(info):
         extractProc.communicate()
         return 0
 
-    encodeThreadDone = False
-    encodeThreadProc = None
-
     # Encode thread Function
     def encodeThread(video, cmd):
-        nonlocal encodeThreadDone
-        nonlocal encodeThreadProc
-        encodeThreadProc = sp.Popen(cmd, stdin=sp.PIPE)
-        video.output(encodeThreadProc.stdin, y4m=True)
-        encodeThreadProc.communicate()
-        encodeThreadDone = True
+        p = sp.Popen(cmd, stdin=sp.PIPE)
+        video.output(p.stdin, y4m=True)
 
     core = videoInfo.getVSCore()
     video = videoInfo.vapoursynthFilter()
@@ -256,17 +249,16 @@ def encodeVideo(info):
 
     print(" ".join(cmd))
 
-    # Start encode thread
+    # We have to run the encode process in a separate thread, because
+    # CTRTL-C won't work normally when x265 is used via subprocess.
+    # x265 will exit, but the python process will not react to the signal.
     t = threading.Thread(target=encodeThread, args=(video, cmd))
-    t.start()
 
-    # Terminate encodeThreadProc when CTRL-C is used.
+    # This will close the python/vapoursynth thread first which will then
+    # cause the encoder to exit via EOF.
     try:
-        while not encodeThreadDone:
-            time.sleep(0.1)
-
+        t.start()
     except KeyboardInterrupt:
-        encodeThreadProc.terminate()
         exit(0)
 
 
