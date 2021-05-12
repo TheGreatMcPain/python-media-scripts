@@ -215,6 +215,22 @@ def mergeMKV(info):
 
 
 def encodeVideo(info):
+    sourceFile = info['sourceFile']
+    # VapourSynth stuff
+    videoInfo = encodeInfo.encodeInfo(sourceFile)
+
+    if not info['video']['convert']:
+        # Assume video in on track 0.
+        mkvOutTrack = "0:" + videoInfo.getEncodeFile()
+        cmd = ["mkvextract", info['sourceFile'], 'tracks', mkvOutTrack]
+
+        # Print extract command
+        print(" ".join(cmd))
+
+        extractProc = sp.Popen(cmd)
+        extractProc.communicate()
+        return 0
+
     encodeThreadDone = False
     encodeThreadProc = None
 
@@ -226,11 +242,6 @@ def encodeVideo(info):
         video.output(encodeThreadProc.stdin, y4m=True)
         encodeThreadProc.communicate()
         encodeThreadDone = True
-
-    sourceFile = info['sourceFile']
-
-    # VapourSynth stuff
-    videoInfo = encodeInfo.encodeInfo(sourceFile)
 
     core = videoInfo.getVSCore()
     video = videoInfo.vapoursynthFilter()

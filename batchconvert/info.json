@@ -3,6 +3,7 @@
   "title": "Avengers - End Game",
   "outputFile": "Avengers - End Game.mkv",
   "video": {
+    "convert": true,
     "title": "1080p (H264)",
     "language": "eng",
     "mkvmergeOpts": ["--aspect-ratio", "0:16/9"]
