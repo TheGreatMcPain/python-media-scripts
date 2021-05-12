@@ -1,6 +1,11 @@
 import vapoursynth as vs
 import havsfunc as haf
 import sys
+import os
+import psutil
+import threading
+import subprocess as sp
+
 core = vs.core
 """
 This will be imported by 'batchencode.py'.
@@ -48,9 +53,26 @@ class encodeInfo:
         return VIDEO_ENCODE_NAME
 
 
-# Tries to mimic vspipe's --info option.
+# A single under-score basically marks this function as private 'module-level'
+# meaning this function won't be imported via "from <module> import *"
+def _encodeVideo(info: encodeInfo):
+    video = info.vapoursynthFilter()
+    cmd = info.getEncodeCmd()
+
+    p = sp.Popen(cmd, stdin=sp.PIPE, shell=False)
+    video.output(p.stdin, y4m=True)
+
+
+# A encode test program
 if __name__ == "__main__":
-    # Supply video source as argument. For testing.
+    if len(sys.argv) < 2:
+        print("Usage:", sys.argv[0], " <in-file> <encode>")
+        print()
+        print("    <in-file> Is the video file")
+        print("    <encode> can be nothing or a \"y\"")
+        exit(1)
+
+    # Tries to mimic vspipe's --info option.
     info = encodeInfo(sys.argv[1])
     video = info.vapoursynthFilter()
     print('Width:', video.width)
@@ -62,3 +84,18 @@ if __name__ == "__main__":
     print('Bits:', video.format.bits_per_sample)
     print('SubSampling W:', video.format.subsampling_w)
     print('SubSampling H:', video.format.subsampling_h)
+
+    if len(sys.argv) == 3:
+        if sys.argv[2].lower() == "y":
+            # run encode program.
+            ps = psutil.Process(os.getpid())
+            ps.nice(15)
+
+            t = threading.Thread(target=_encodeVideo, args=[info])
+
+            try:
+                t.start()
+            except KeyboardInterrupt:
+                pass
+        else:
+            print(sys.argv[2], "is an invalid option.")
