@@ -229,10 +229,13 @@ def encodeVideo(info):
         extractProc.communicate()
         return 0
 
+    encodeProcess = None
+
     # Encode thread Function
     def encodeThread(video, cmd):
-        p = sp.Popen(cmd, stdin=sp.PIPE)
-        video.output(p.stdin, y4m=True)
+        nonlocal encodeProcess
+        encodeProcess = sp.Popen(cmd, stdin=sp.PIPE)
+        video.output(encodeProcess.stdin, y4m=True)
 
     core = videoInfo.getVSCore()
     video = videoInfo.vapoursynthFilter()
@@ -258,7 +261,10 @@ def encodeVideo(info):
     # cause the encoder to exit via EOF.
     try:
         t.start()
+        t.join()  # Wait for the encode to finish.
     except KeyboardInterrupt:
+        # Close the processes stdin, because x265 doesn't do it by itself.
+        encodeProcess.stdin.close()
         exit(0)
 
 
