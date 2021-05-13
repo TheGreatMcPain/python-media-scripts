@@ -55,12 +55,25 @@ class encodeInfo:
 
 # A single under-score basically marks this function as private 'module-level'
 # meaning this function won't be imported via "from <module> import *"
-def _encodeVideo(info: encodeInfo):
-    video = info.vapoursynthFilter()
-    cmd = info.getEncodeCmd()
+class encodeVideo:
+    def __init__(self, info: encodeInfo):
+        self.video = info.vapoursynthFilter()
+        self.cmd = info.getEncodeCmd()
+        self.process = sp.Popen(self.cmd, stdin=sp.PIPE)
+        self.thread = None
 
-    p = sp.Popen(cmd, stdin=sp.PIPE, shell=False)
-    video.output(p.stdin, y4m=True)
+    def __encodeThread(self):
+        self.video.output(self.process.stdin, y4m=True)
+
+    def start(self):
+        self.thread = threading.Thread(target=self.__encodeThread)
+
+        try:
+            self.thread.start()
+            self.thread.join()
+        except KeyboardInterrupt:
+            self.process.stdin.close()
+            pass
 
 
 # A encode test program
@@ -91,11 +104,7 @@ if __name__ == "__main__":
             ps = psutil.Process(os.getpid())
             ps.nice(15)
 
-            t = threading.Thread(target=_encodeVideo, args=[info])
-
-            try:
-                t.start()
-            except KeyboardInterrupt:
-                pass
+            encode = encodeVideo(info)
+            encode.start()
         else:
             print(sys.argv[2], "is an invalid option.")
