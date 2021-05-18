@@ -26,7 +26,6 @@ def main():
             print(blurayRoot, "is not a BluRay Directory.")
             exit(1)
         blurayInfo = getBlurayInfo(blurayRoot, JSONFILE)
-        print(json.dumps(blurayInfo, indent=4))
     batchCreateMKVs(blurayInfo['blurayDir'], blurayInfo['titles'], OUTFILE)
 
 
