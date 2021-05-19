@@ -3,8 +3,13 @@
 import os
 import json
 from time import sleep
-from shutil import copy
+from shutil import copyfile
 from subprocess import Popen, PIPE, STDOUT, DEVNULL
+
+# FFmpeg filter used to downmix the surround audio
+# Should work with everything up to 7.1 Surround.
+FF_PAN_FILTER = 'pan=stereo|FL=FC+0.60*FL+0.60*FLC+0.60*BL+0.60*SL+0.60*LFE|'
+FF_PAN_FILTER += 'FR=FC+0.60*FR+0.60*FRC+0.60*BR+0.60*SR+0.60*LFE'
 
 
 def main():
@@ -33,11 +38,15 @@ def main():
 
 def replaceNightmode(workDict):
     maxdB = '-0.5'
-    doNotRemoveThese = [
-        'filelist.txt', 'gen_nightmode.py', 'rejectFiles.txt',
-        'replace_nightmode.py'
-    ]
-    doNotRemoveThese += ['resumeDictList.json', 'workDictList.json']
+
+    # Generate deleteList
+    deleteList = []
+    deleteExt = ['flac', 'm4a', 'mkv']
+    for file in os.listdir('.'):
+        fileExt = file.split('.')[-1].lower()
+        if fileExt in deleteExt:
+            deleteList.append(file)
+    deleteList.append('resume.txt')
 
     codec = workDict['codec']
     if codec == 'flac':
@@ -55,7 +64,7 @@ def replaceNightmode(workDict):
         resume = resume[0].rstrip()
     if resume == None:
         print("Copying from", workDict['sourceFile'], "to", "./source.mkv")
-        copy(workDict['sourceFile'], './source.mkv')
+        copyfile(workDict['sourceFile'], './source.mkv')
         writeToFile(resumeFile, "copyed-to-source")
         resume = 'copyed-to-source'
     for track in workDict['surroundTracks']:
@@ -104,20 +113,19 @@ def replaceNightmode(workDict):
         print("I'll wait 15 seconds before continuing", end='')
         print(", but if you want me to continue press CTRL-C.")
         try:
-            for range(0, 30):
+            for _ in range(0, 30):
                 sleep(1)
             print("No input... continuing.")
         except KeyboardInterrupt:
             print("CTRL-C Entered... continuing.")
         print("Copying from", "./output.mkv", "to", workDict['sourceFile'])
-        copy('./output.mkv', workDict['sourceFile'])
+        copyfile('./output.mkv', workDict['sourceFile'])
         writeToFile(resumeFile, "copyed-newmkv")
         resume = 'copyed-newmkv'
     if resume == 'copyed-newmkv':
         print("Cleaning up.")
-        for x in os.listdir('.'):
-            if x not in doNotRemoveThese:
-                os.remove(x)
+        for x in deleteList:
+            os.remove(x)
 
 
 def distListToJson(filename, theList):
@@ -160,79 +168,42 @@ def fileToList(filename):
 
 def outputMkv(workDict, inMkvFile, outMkvFile, nightmodeLoudnormFile,
               nightmodeDRCFile, codec):
+    languageMap = {}
+    languageMap['eng'] = 'English'
+    languageMap['jpn'] = 'Japanese'
+
+    codecMap = {}
+    codecMap['flac'] = {}
+    codecMap['flac']['title'] = 'FLAC'
+    codecMap['flac']['ext'] = 'flac'
+
+    codecMap['aac'] = {}
+    codecMap['aac']['title'] = 'AAC'
+    codecMap['aac']['ext'] = 'm4a'
+
     mkvmergeCmd = [
         'mkvmerge', '-o', outMkvFile, '--track-order',
         genTrackOrder(workDict)
     ]
     mkvmergeCmd += ['--audio-tracks', genKeepAudioTracks(workDict), inMkvFile]
     for surroundTrack in workDict['surroundTracks']:
-        if surroundTrack[1] == 'eng':
-            if codec == 'flac':
-                mkvmergeCmd += [
-                    '--track-name',
-                    '0:English Stereo Nightmode Loudnorm (FLAC)'
-                ]
-                mkvmergeCmd += [
-                    '--language', '0:eng', nightmodeLoudnormFile + '-eng.flac'
-                ]
-                mkvmergeCmd += [
-                    '--track-name',
-                    '0:English Stereo Nightmode DRC+Loudnorm (FLAC)'
-                ]
-                mkvmergeCmd += [
-                    '--language', '0:eng', nightmodeDRCFile + '-eng.flac'
-                ]
-            if codec == 'aac':
-                mkvmergeCmd += [
-                    '--track-name', '0:English Stereo Nightmode Loudnorm (AAC)'
-                ]
-                mkvmergeCmd += [
-                    '--language', '0:eng', nightmodeLoudnormFile + '-eng.m4a'
-                ]
-                mkvmergeCmd += [
-                    '--track-name',
-                    '0:English Stereo Nightmode DRC+Loudnorm (AAC)'
-                ]
-                mkvmergeCmd += [
-                    '--language', '0:eng', nightmodeDRCFile + '-eng.m4a'
-                ]
-        if surroundTrack[1] == 'jpn':
-            if codec == 'flac':
-                mkvmergeCmd += [
-                    '--track-name',
-                    '0:Japenese Stereo Nightmode Loudnorm (FLAC)'
-                ]
-                mkvmergeCmd += [
-                    '--language', '0:jpn', nightmodeLoudnormFile + '-jpn.flac'
-                ]
-                mkvmergeCmd += [
-                    '--track-name',
-                    '0:Japenese Stereo Nightmode DRC+Loudnorm (FLAC)'
-                ]
-                mkvmergeCmd += [
-                    '--language', '0:jpn', nightmodeDRCFile + '-jpn.flac'
-                ]
-            if codec == 'aac':
-                mkvmergeCmd += [
-                    '--track-name',
-                    '0:Japenese Stereo Nightmode Loudnorm (AAC)'
-                ]
-                mkvmergeCmd += [
-                    '--language', '0:jpn', nightmodeLoudnormFile + '-jpn.m4a'
-                ]
-                mkvmergeCmd += [
-                    '--track-name',
-                    '0:Japenese Stereo Nightmode DRC+Loudnorm (AAC)'
-                ]
-                mkvmergeCmd += [
-                    '--language', '0:jpn', nightmodeDRCFile + '-jpn.m4a'
-                ]
+        trackTitleLoudnorm = "{} Stereo Nightmode Loudnorm ({})".format(
+            languageMap[surroundTrack[1]], codecMap[codec]['title'])
+        trackTitleDRC = "{} Stereo Nightmode DRC+Loudnorm ({})".format(
+            languageMap[surroundTrack[1]], codecMap[codec]['title'])
+
+        mkvmergeCmd += ['--track-name', '0:' + trackTitleLoudnorm]
+        mkvmergeCmd += [
+            '--language', '0:' + surroundTrack[1], nightmodeLoudnormFile +
+            '-{}.{}'.format(surroundTrack[1], codecMap[codec]['ext'])
+        ]
+        mkvmergeCmd += ['--track-name', '0:' + trackTitleDRC]
+        mkvmergeCmd += [
+            '--language', '0:' + surroundTrack[1], nightmodeDRCFile +
+            '-{}.{}'.format(surroundTrack[1], codecMap[codec]['ext'])
+        ]
     mkvmerge = Popen(mkvmergeCmd, stdout=DEVNULL, stderr=STDOUT)
     mkvmerge.communicate()
-
-
-def getNightmodeFiles(nightmodeLoudnormFile, nightmodeDRCFile):
-    fileList = os.listdir('.')
 
 
 def genKeepAudioTracks(workDict):
@@ -272,36 +243,29 @@ def extractAudio(mkvFile, trackNum, outFile):
     ffmpeg.communicate()
 
 
-def nightmodeDRCplusLoudnorm(inFile, outFile, codec, maxdB):
+def nightmode(inFile, outFile, codec, maxdB, ffFilter):
     normFile = 'normin.flac'
-    filter = 'pan=stereo|FL=FC+0.30*FL+0.30*FLC+0.30*BL+0.30*SL+0.60*LFE|'
-    filter += 'FR=FC+0.30*FR+0.30*FRC+0.30*BR+0.30*SR+0.60*LFE,'
-    filter += 'acompressor=ratio=4,loudnorm'
     samplerate = getSamplerate(inFile)
     ffmpegCmd = ['ffmpeg', '-hide_banner', '-i', inFile]
     ffmpegCmd += ['-acodec', 'flac', '-compression_level', '8', '-af']
-    ffmpegCmd += [filter, '-ar', samplerate, '-y', normFile]
+    ffmpegCmd += [ffFilter, '-ar', samplerate, '-y', normFile]
     ffmpeg = Popen(ffmpegCmd, stdout=DEVNULL, stderr=STDOUT)
     ffmpeg.communicate()
     normalized = normAudio(normFile, outFile, codec, maxdB)
     if normalized:
         os.remove(normFile)
+
+
+def nightmodeDRCplusLoudnorm(inFile, outFile, codec, maxdB):
+    ffFilter = FF_PAN_FILTER
+    ffFilter += ',acompressor=ratio=4,loudnorm'
+    nightmode(inFile, outFile, codec, maxdB, ffFilter)
 
 
 def nightmodeLoudnorm(inFile, outFile, codec, maxdB):
-    normFile = 'normin.flac'
-    filter = 'pan=stereo|FL=FC+0.30*FL+0.30*FLC+0.30*BL+0.30*SL+0.60*LFE|'
-    filter += 'FR=FC+0.30*FR+0.30*FRC+0.30*BR+0.30*SR+0.60*LFE,'
-    filter += 'loudnorm'
-    samplerate = getSamplerate(inFile)
-    ffmpegCmd = ['ffmpeg', '-hide_banner', '-i', inFile]
-    ffmpegCmd += ['-acodec', 'flac', '-compression_level', '8', '-af']
-    ffmpegCmd += [filter, '-ar', samplerate, '-y', normFile]
-    ffmpeg = Popen(ffmpegCmd, stdout=DEVNULL, stderr=STDOUT)
-    ffmpeg.communicate()
-    normalized = normAudio(normFile, outFile, codec, maxdB)
-    if normalized:
-        os.remove(normFile)
+    ffFilter = FF_PAN_FILTER
+    ffFilter += ',loudnorm'
+    nightmode(inFile, outFile, codec, maxdB, ffFilter)
 
 
 def getSamplerate(inFile):
