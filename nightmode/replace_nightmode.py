@@ -46,7 +46,7 @@ def replaceNightmode(workDict):
     deleteList = []
     deleteExt = ['flac', 'm4a', 'mkv']
     for file in os.listdir('.'):
-        fileExt = file.split('.')[-1].lower()
+        fileExt = os.path.splitext(file)[1].lower()
         if fileExt in deleteExt:
             deleteList.append(file)
     deleteList.append('resume.txt')
@@ -331,6 +331,8 @@ def normAudio(inFile, outFile, codec, maxdB):
         print("Already Normalized")
         return True
     print("Adjusting Volume by:", volumeAdj)
+    # encodeFlacToM4a will change the file extension for us.
+    outFile = os.path.splitext(outFile)[0] + '.flac'
     ffmpegCmd = [
         'ffmpeg', '-y', '-i', inFile, '-acodec', 'flac', '-compression_level',
         '8', '-af', 'volume=' + str(volumeAdj) + 'dB', outFile
@@ -349,10 +351,10 @@ def normAudio(inFile, outFile, codec, maxdB):
 
 def encodeFlacToM4a(flacFile):
     print('Converting flac to m4a')
-    m4aFile = flacFile.split('.flac')[0] + '.m4a'
+    m4aFile = os.path.splitext(flacFile)[0] + '.m4a'
     ffmpegCmd = [
-        'ffmpeg', '-i', flacFile, '-acodec', 'aac', '-b:a', '256K', '-movflags',
-        'faststart', '-y', m4aFile
+        'ffmpeg', '-i', flacFile, '-acodec', 'aac', '-b:a', '256K',
+        '-movflags', 'faststart', '-y', m4aFile
     ]
     ffmpegAudio(ffmpegCmd, flacFile, None)
     os.remove(flacFile)
@@ -373,20 +375,28 @@ def getMaxdB(inFile):
 
 
 def printTracks(mkvFile):
-    ffmpegCmd = ['ffmpeg', '-i', mkvFile]
-    ffmpeg = sp.Popen(ffmpegCmd,
-                      stdout=sp.PIPE,
-                      stderr=sp.STDOUT,
-                      universal_newlines=True)
-    metadata = []
-    for line in ffmpeg.stdout:
-        line = line.rstrip()
-        if '      title ' in line or 'Stream' in line:
-            if 'Chapter' not in line:
-                metadata.append(line)
+    ffaudioInfo = []
 
-    for x in metadata:
-        print(x)
+    for stream in ffprobe(mkvFile)['streams']:
+        if stream['codec_type'] == 'audio':
+            audioInfo = {}
+            audioInfo['index'] = stream['index']
+            try:
+                audioInfo['title'] = stream['tags']['title']
+            except:
+                audioInfo['title'] = "Unknown"
+            audioInfo['lang'] = stream['tags']['language']
+            audioInfo['codec'] = stream['codec_name']
+            audioInfo['channel_layout'] = stream['channel_layout']
+            audioInfo['sample_rate'] = stream['sample_rate']
+            audioInfo['sample_fmt'] = stream['sample_fmt']
+
+            ffaudioInfo.append(audioInfo)
+
+    # print("File:", os.path.basename(mkvFile))
+    for stream in ffaudioInfo:
+        print(" ".join(["{}".format(stream[x]) for x in stream.keys()]))
+    print()
 
 
 if __name__ == '__main__':
