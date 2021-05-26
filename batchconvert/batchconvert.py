@@ -32,6 +32,9 @@ BDSUP2SUB = ['bdsup2sub++']
 # 0.0 would be the highest without clipping.
 MAXDB = '-0.5'
 
+# Nightmode Downmixing settings.
+SUR_CHANNEL_VOL = 0.60  # Volume level to set the non-center channels to.
+LFE_CHANNEL_VOL = 0.60  # Volume to set the LFE channel to.
 
 def main():
     folders = []
@@ -424,17 +427,23 @@ def normAudio(inFile, outFile, codec, maxdB):
 
 
 def nightmodeTrack(inFile, outFile, codec, withDRC, maxdB):
+    surVol = "{}".format(SUR_CHANNEL_VOL)
+    lfeVol = "{}".format(LFE_CHANNEL_VOL)
+
+    ffPanFilterL = 'FL=FC+{s}*FL+{s}*FLC+{s}*BL+{s}*SL+{l}*LFE'.format(s=surVol,
+                                                                       l=lfeVol)
+    ffPanFilterR = 'FR=FC+{s}*FR+{s}*FRC+{s}*BR+{s}*SR+{l}*LFE'.format(s=surVol,
+                                                                       l=lfeVol)
     normfile = 'prenorm.flac'
-    filter = 'pan=stereo|FL=FC+0.30*FL+0.30*FLC+0.30*BL+0.30*SL+0.60*LFE|'
-    filter += 'FR=FC+0.30*FR+0.30*FRC+0.30*BR+0.30*SR+0.60*LFE,'
+    ffFilter = 'pan=stereo|{}|{}'.format(ffPanFilterL, ffPanFilterR)
     if withDRC:
-        filter += 'acompressor=ratio=4,loudnorm'
+        ffFilter += ',acompressor=ratio=4,loudnorm'
     else:
-        filter += 'loudnorm'
+        ffFilter += ',loudnorm'
     samplerate = getSamplerate(inFile)
     cmd = [
         'ffmpeg', '-i', inFile, '-acodec', 'flac', '-compression_level', '8',
-        '-af', filter, '-ar', samplerate, '-y', normfile
+        '-af', ffFilter, '-ar', samplerate, '-y', normfile
     ]
     ffmpegAudio(cmd, inFile, None)
     normalized = normAudio(normfile, outFile, codec, maxdB)
