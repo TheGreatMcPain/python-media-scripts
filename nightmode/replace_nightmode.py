@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
-
 import os
 import json
-from time import sleep
+import time
 from shutil import copyfile
-from subprocess import Popen, PIPE, STDOUT, DEVNULL
+import subprocess as sp
+
+# Nightmode Downmixing settings.
+SUR_CHANNEL_VOL = 0.60  # Volume level to set the non-center channels to.
+LFE_CHANNEL_VOL = 0.60  # Volume to set the LFE channel to.
 
 # FFmpeg filter used to downmix the surround audio
 # Should work with everything up to 7.1 Surround.
@@ -114,7 +117,7 @@ def replaceNightmode(workDict):
         print(", but if you want me to continue press CTRL-C.")
         try:
             for _ in range(0, 30):
-                sleep(1)
+                time.sleep(1)
             print("No input... continuing.")
         except KeyboardInterrupt:
             print("CTRL-C Entered... continuing.")
@@ -202,7 +205,7 @@ def outputMkv(workDict, inMkvFile, outMkvFile, nightmodeLoudnormFile,
             '--language', '0:' + surroundTrack[1], nightmodeDRCFile +
             '-{}.{}'.format(surroundTrack[1], codecMap[codec]['ext'])
         ]
-    mkvmerge = Popen(mkvmergeCmd, stdout=DEVNULL, stderr=STDOUT)
+    mkvmerge = sp.Popen(mkvmergeCmd, stdout=sp.DEVNULL, stderr=sp.STDOUT)
     mkvmerge.communicate()
 
 
@@ -239,50 +242,85 @@ def extractAudio(mkvFile, trackNum, outFile):
     ffmpegCmd = [
         'ffmpeg', '-i', mkvFile, '-map', '0:' + trackNum, '-y', outFile
     ]
-    ffmpeg = Popen(ffmpegCmd, stdout=DEVNULL, stderr=STDOUT)
+    ffmpeg = sp.Popen(ffmpegCmd, stdout=sp.DEVNULL, stderr=sp.STDOUT)
     ffmpeg.communicate()
+
+
+# from: https://github.com/Tatsh/ffmpeg-progress/blob/master/ffmpeg_progress.py
+def ffprobe(in_file):
+    """ffprobe font-end."""
+    return dict(
+        json.loads(
+            sp.check_output(('ffprobe', '-v', 'quiet', '-print_format', 'json',
+                             '-show_format', '-show_streams', in_file),
+                            encoding='utf-8')))
+
+
+def ffmpegAudio(cmd, inFile, trackid):
+    print("Total Duration : ", end='')
+    if trackid is not None:
+        tags = ffprobe(inFile)['streams'][int(trackid)]['tags']
+    else:
+        tags = ffprobe(inFile)['streams'][0]
+    if 'duration' in tags:
+        durationSec = int(tags['duration'].split('.')[0])
+        durationMili = tags['duration'].split('.')[1]
+        duration = time.strftime('%H:%M:%S', time.gmtime(durationSec))
+        duration += '.' + durationMili
+        print(duration)
+    else:
+        print(tags['DURATION-eng'])
+    print(" ".join(cmd))
+    p = sp.Popen(cmd,
+                 stderr=sp.STDOUT,
+                 stdout=sp.PIPE,
+                 universal_newlines=True)
+    for line in p.stdout:
+        line = line.rstrip()
+        if 'size=' in line:
+            print(f'{line}\r', end='')
+    print()
 
 
 def nightmode(inFile, outFile, codec, maxdB, ffFilter):
     normFile = 'normin.flac'
     samplerate = getSamplerate(inFile)
-    ffmpegCmd = ['ffmpeg', '-hide_banner', '-i', inFile]
-    ffmpegCmd += ['-acodec', 'flac', '-compression_level', '8', '-af']
-    ffmpegCmd += [ffFilter, '-ar', samplerate, '-y', normFile]
-    ffmpeg = Popen(ffmpegCmd, stdout=DEVNULL, stderr=STDOUT)
-    ffmpeg.communicate()
+    ffmpegCmd = [
+        'ffmpeg', '-i', inFile, '-acodec', 'flac', '-compression_level', '8',
+        '-af', ffFilter, '-ar', samplerate, '-y', normFile
+    ]
+    ffmpegAudio(ffmpegCmd, inFile, None)
     normalized = normAudio(normFile, outFile, codec, maxdB)
     if normalized:
         os.remove(normFile)
 
 
+def getffFilter(surVol: float, lfeVol: float):
+    surVol = "{}".format(surVol)
+    lfeVol = "{}".format(lfeVol)
+
+    ffPanFilterL = 'FL=FC+{s}*FL+{s}*FLC+{s}*BL+{s}*SL+{l}*LFE'.format(
+        s=surVol, l=lfeVol)
+    ffPanFilterR = 'FR=FC+{s}*FR+{s}*FRC+{s}*BR+{s}*SR+{l}*LFE'.format(
+        s=surVol, l=lfeVol)
+
+    return 'pan=stereo|{}|{}'.format(ffPanFilterL, ffPanFilterR)
+
+
 def nightmodeDRCplusLoudnorm(inFile, outFile, codec, maxdB):
-    ffFilter = FF_PAN_FILTER
+    ffFilter = getffFilter(SUR_CHANNEL_VOL, LFE_CHANNEL_VOL)
     ffFilter += ',acompressor=ratio=4,loudnorm'
     nightmode(inFile, outFile, codec, maxdB, ffFilter)
 
 
 def nightmodeLoudnorm(inFile, outFile, codec, maxdB):
-    ffFilter = FF_PAN_FILTER
+    ffFilter = getffFilter(SUR_CHANNEL_VOL, LFE_CHANNEL_VOL)
     ffFilter += ',loudnorm'
     nightmode(inFile, outFile, codec, maxdB, ffFilter)
 
 
 def getSamplerate(inFile):
-    ffmpegCmd = ['ffmpeg', '-i', inFile]
-    ffmpeg = Popen(ffmpegCmd,
-                   stdout=PIPE,
-                   stderr=STDOUT,
-                   universal_newlines=True)
-    for line in ffmpeg.stdout:
-        line = line.rstrip()
-        if 'Stream' in line:
-            metadata = line
-    metadata = metadata.split(',')
-    samplerate = ''
-    for x in range(1, len(metadata[1]) - 3):
-        samplerate += metadata[1][x]
-    return samplerate
+    return ffprobe(inFile)['streams'][0]['sample_rate']
 
 
 def normAudio(inFile, outFile, codec, maxdB):
@@ -292,14 +330,12 @@ def normAudio(inFile, outFile, codec, maxdB):
     else:
         print("Already Normalized")
         return True
-    if codec == 'aac':
-        outFile = outFile.split('.m4a')[0] + '.flac'
     print("Adjusting Volume by:", volumeAdj)
-    ffmpegCmd = ['ffmpeg', '-hide_banner', '-i', inFile]
-    ffmpegCmd += ['-acodec', 'flac', '-compression_level', '8']
-    ffmpegCmd += ['-af', 'volume=' + str(volumeAdj) + 'dB', '-y', outFile]
-    ffmpeg = Popen(ffmpegCmd, stdout=DEVNULL, stderr=STDOUT)
-    ffmpeg.communicate()
+    ffmpegCmd = [
+        'ffmpeg', '-y', '-i', inFile, '-acodec', 'flac', '-compression_level',
+        '8', '-af', 'volume=' + str(volumeAdj) + 'dB', outFile
+    ]
+    ffmpegAudio(ffmpegCmd, inFile, None)
     verifyVol = getMaxdB(outFile)
     if verifyVol == maxdB:
         print("Normalize Complete")
@@ -314,38 +350,34 @@ def normAudio(inFile, outFile, codec, maxdB):
 def encodeFlacToM4a(flacFile):
     print('Converting flac to m4a')
     m4aFile = flacFile.split('.flac')[0] + '.m4a'
-    ffmpegCmd = ['ffmpeg', '-hide_banner', '-i', flacFile]
-    ffmpegCmd += ['-acodec', 'aac', '-b:a', '256K']
-    ffmpegCmd += ['-movflags', 'faststart', '-y', m4aFile]
-    ffmpeg = Popen(ffmpegCmd, stdout=DEVNULL, stderr=STDOUT)
-    ffmpeg.communicate()
+    ffmpegCmd = [
+        'ffmpeg', '-i', flacFile, '-acodec', 'aac', '-b:a', '256K', '-movflags',
+        'faststart', '-y', m4aFile
+    ]
+    ffmpegAudio(ffmpegCmd, flacFile, None)
     os.remove(flacFile)
 
 
 def getMaxdB(inFile):
     ffmpegCmd = ['ffmpeg', '-i', inFile, '-acodec', 'pcm_s16le', '-af']
     ffmpegCmd += ['volumedetect', '-f', 'null', 'null']
-    ffmpeg = Popen(ffmpegCmd,
-                   stdout=PIPE,
-                   stderr=STDOUT,
-                   universal_newlines=True)
-    temp = ''
-    maxVolume = ''
+    ffmpeg = sp.Popen(ffmpegCmd,
+                      stdout=sp.PIPE,
+                      stderr=sp.STDOUT,
+                      universal_newlines=True)
     for line in ffmpeg.stdout:
         line = line.rstrip()
         if 'max_volume' in line:
             temp = line
-    for x in range(temp.index(':') + 2, len(temp) - 3):
-        maxVolume += temp[x]
-    return maxVolume
+    return temp[temp.index(':') + 2:-3]
 
 
 def printTracks(mkvFile):
     ffmpegCmd = ['ffmpeg', '-i', mkvFile]
-    ffmpeg = Popen(ffmpegCmd,
-                   stdout=PIPE,
-                   stderr=STDOUT,
-                   universal_newlines=True)
+    ffmpeg = sp.Popen(ffmpegCmd,
+                      stdout=sp.PIPE,
+                      stderr=sp.STDOUT,
+                      universal_newlines=True)
     metadata = []
     for line in ffmpeg.stdout:
         line = line.rstrip()
