@@ -9,12 +9,6 @@ import subprocess as sp
 SUR_CHANNEL_VOL = 0.60  # Volume level to set the non-center channels to.
 LFE_CHANNEL_VOL = 0.60  # Volume to set the LFE channel to.
 
-# FFmpeg filter used to downmix the surround audio
-# Should work with everything up to 7.1 Surround.
-FF_PAN_FILTER = 'pan=stereo|FL=FC+0.60*FL+0.60*FLC+0.60*BL+0.60*SL+0.60*LFE|'
-FF_PAN_FILTER += 'FR=FC+0.60*FR+0.60*FRC+0.60*BR+0.60*SR+0.60*LFE'
-
-
 def main():
     workListFile = 'workDictList.json'
     resumeListFile = 'resumeDictList.json'
