@@ -176,7 +176,10 @@ def getFileStats(filelist: list):
                 # We only need these
                 audioInfo = {}
                 audioInfo['index'] = stream['index']
-                audioInfo['title'] = stream['tags']['title']
+                try:
+                    audioInfo['title'] = stream['tags']['title']
+                except:
+                    audioInfo['title'] = 'Unknown'
                 audioInfo['lang'] = stream['tags']['language']
                 audioInfo['codec'] = stream['codec_name']
                 audioInfo['channel_layout'] = stream['channel_layout']
