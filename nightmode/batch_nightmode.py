@@ -192,7 +192,7 @@ def createResumeJson(resumeDatabaseFile, resumeJobList, jobsDatabaseFile):
     resumeData['jobList'] = resumeJobList
 
     with open(resumeDatabaseFile, 'w') as f:
-        json.dump(f, resumeData, indent=2)
+        json.dump(resumeData, f, indent=2)
 
 
 def jsonToDictList(filename):
