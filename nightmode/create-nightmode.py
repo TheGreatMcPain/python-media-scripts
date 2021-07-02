@@ -164,12 +164,10 @@ def normAudio(inFile, outFile, codec, maxdB):
 def nightmodeTrack(inFile, outFile, codec, withDRC, maxdB):
     normfile = 'prenorm.flac'
     ffFilter = getffFilter(SUR_CHANNEL_VOL, LFE_CHANNEL_VOL)
-    ffFilter = 'pan=stereo|FL=FC+0.30*FL+0.30*FLC+0.30*BL+0.30*SL+0.60*LFE|'
-    ffFilter += 'FR=FC+0.30*FR+0.30*FRC+0.30*BR+0.30*SR+0.60*LFE,'
     if withDRC:
-        ffFilter += 'acompressor=ratio=4,loudnorm'
+        ffFilter += ',acompressor=ratio=4,loudnorm'
     else:
-        ffFilter += 'loudnorm'
+        ffFilter += ',loudnorm'
     samplerate = getSamplerate(inFile)
     cmd = [
         'ffmpeg', '-i', inFile, '-acodec', 'flac', '-compression_level', '8',
