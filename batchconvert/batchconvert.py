@@ -17,30 +17,31 @@ import encodeInfo
 psutil.Process(os.getpid()).nice(15)  # Comment out if not using psutil
 
 # Globals
-INFOFILE = 'info.json'
-ENCODEINFO = 'encodeInfo.py'
-RESUME = 'resume-file'
+INFOFILE = "info.json"
+ENCODEINFO = "encodeInfo.py"
+RESUME = "resume-file"
 
 # BDSup2Sub Settings #
 # Use java version
 # BDSUP2SUB = ['/usr/bin/java', '-jar',
 #              '~/.local/share/bdsup2sub/BDSup2Sub.jar']
 # Use C++ version
-BDSUP2SUB = ['bdsup2sub++']
+BDSUP2SUB = ["bdsup2sub++"]
 
 # This is a maximum volume level the nightmode tracks will have. (in dB).
 # 0.0 would be the highest without clipping.
-MAXDB = '-0.5'
+MAXDB = "-0.5"
 
 # Nightmode Downmixing settings.
 SUR_CHANNEL_VOL = 0.60  # Volume level to set the non-center channels to.
 LFE_CHANNEL_VOL = 0.60  # Volume to set the LFE channel to.
 
+
 def main():
     folders = []
-    lsdir = os.listdir('.')
+    lsdir = os.listdir(".")
     if INFOFILE in lsdir:
-        folders.append('.')
+        folders.append(".")
         if len(sys.argv) == 1:
             print(INFOFILE, "found in current directory.")
             print("We'll only convert one mkv file.\n")
@@ -60,15 +61,13 @@ def main():
                 if os.path.isfile(encodeInfoFile):
                     global encodeInfo
                     # Delete the old 'encodeInfo' import
-                    del sys.modules['encodeInfo']
+                    del sys.modules["encodeInfo"]
                     # insert the path to 'encodeInfoFile' in system PATH
-                    sys.path.insert(
-                        0, os.path.dirname(os.path.abspath(encodeInfoFile)))
+                    sys.path.insert(0, os.path.dirname(os.path.abspath(encodeInfoFile)))
                     # Import the new 'encodeInfo' into our global imports
-                    globals()['encodeInfo'] = __import__('encodeInfo')
+                    globals()["encodeInfo"] = __import__("encodeInfo")
                     # Cleanup the system PATH
-                    sys.path.remove(
-                        os.path.dirname(os.path.abspath(encodeInfoFile)))
+                    sys.path.remove(os.path.dirname(os.path.abspath(encodeInfoFile)))
                 os.chdir(folder)
                 index = folders.index(folder)
                 total = len(folders)
@@ -77,33 +76,33 @@ def main():
                 os.chdir("..")
 
                 # Reimport the "global" 'encodeInfo'
-                del sys.modules['encodeInfo']
-                globals()['encodeInfo'] = __import__('encodeInfo')
+                del sys.modules["encodeInfo"]
+                globals()["encodeInfo"] = __import__("encodeInfo")
 
     print("Cleaning python cache files.")
-    cleanPythonCache('.')
+    cleanPythonCache(".")
 
     if len(sys.argv) == 2:
-        if '--clean' == sys.argv[1]:
+        if "--clean" == sys.argv[1]:
             exclude = [os.path.basename(__file__), INFOFILE, ENCODEINFO]
             print("\nCleaning temp files")
             for folder in folders:
                 infoPath = os.path.join(folder, INFOFILE)
                 info = getInfo(infoPath)
-                exclude.append(info['sourceFile'])
+                exclude.append(info["sourceFile"])
                 deleteList = list(set(os.listdir(folder)) - set(exclude))
                 for file in deleteList:
                     filePath = os.path.join(folder, file)
                     print("Deleting:", filePath)
                     os.remove(filePath)
-                exclude.remove(info['sourceFile'])
+                exclude.remove(info["sourceFile"])
 
-        if '--clean-sources' == sys.argv[1]:
+        if "--clean-sources" == sys.argv[1]:
             print("\nCleaning source video files")
             for folder in folders:
                 infoPath = os.path.join(folder, INFOFILE)
                 info = getInfo(infoPath)
-                path = os.path.join(folder, info['sourceFile'])
+                path = os.path.join(folder, info["sourceFile"])
                 if os.path.exists(path):
                     print("Deleting:", path)
                     os.remove(path)
@@ -133,7 +132,7 @@ def convertMKV(infoFile):
         print()
     if "encoded" == status:
         mergeMKV(info)
-        os.rename(info['outputFile'], os.path.join("..", info['outputFile']))
+        os.rename(info["outputFile"], os.path.join("..", info["outputFile"]))
         status = writeResume("merged")
         print()
     if "merged" == status:
@@ -141,73 +140,92 @@ def convertMKV(infoFile):
 
 
 def writeResume(status):
-    with open(RESUME, 'w') as f:
+    with open(RESUME, "w") as f:
         f.write(status)
     return status
 
 
 def readResume():
-    with open(RESUME, 'r') as f:
+    with open(RESUME, "r") as f:
         # Read first line in file and strip unneeded charaters.
         status = f.readline().strip()
     return status
 
 
 def mergeMKV(info):
-    title = info['title']
-    output = info['outputFile']
-    sourceFile = info['sourceFile']
+    title = info["title"]
+    output = info["outputFile"]
+    sourceFile = info["sourceFile"]
     videoInfo = encodeInfo.encodeInfo(sourceFile)
     videoInputFile = videoInfo.getEncodeFile()
 
     cmd = [
-        'mkvmerge', '--output', output, '--title', title, '--track-name',
-        '0:' + info['video']['title'], '--language',
-        '0:' + info['video']['language']
+        "mkvmerge",
+        "--output",
+        output,
+        "--title",
+        title,
+        "--track-name",
+        "0:" + info["video"]["title"],
+        "--language",
+        "0:" + info["video"]["language"],
     ]
 
-    if 'mkvmergeOpts' in info['video']:
-        cmd += info['video']['mkvmergeOpts']
+    if "mkvmergeOpts" in info["video"]:
+        cmd += info["video"]["mkvmergeOpts"]
     cmd.append(videoInputFile)
 
-    for track in info['audio']:
-        extension = track['extension']
+    for track in info["audio"]:
+        extension = track["extension"]
 
         cmd += [
-            '--track-name', '0:' + track['title'], '--language',
-            '0:' + track['language'], '--default-track',
-            '0:' + track['default'], 'audio-' + track['id'] + '.' + extension
+            "--track-name",
+            "0:" + track["title"],
+            "--language",
+            "0:" + track["language"],
+            "--default-track",
+            "0:" + track["default"],
+            "audio-" + track["id"] + "." + extension,
         ]
 
-        if "yes" in track['nightmode']:
-            if "flac" in track['nightmodeCodec']:
-                extension = 'flac'
+        if "yes" in track["nightmode"]:
+            if "flac" in track["nightmodeCodec"]:
+                extension = "flac"
             else:
-                extension = 'm4a'
+                extension = "m4a"
             cmd += [
-                '--track-name', '0:' + track['nightmodeLoudnormName'],
-                '--language', '0:' + track['language'], '--default-track',
-                '0:' + track['default'],
-                'nightmode-loudnorm-' + track['id'] + '.' + extension,
-                '--track-name', '0:' + track['nightmodeDrcName'], '--language',
-                '0:' + track['language'], '--default-track',
-                '0:' + track['default'],
-                'nightmode-drc-' + track['id'] + '.' + extension
+                "--track-name",
+                "0:" + track["nightmodeLoudnormName"],
+                "--language",
+                "0:" + track["language"],
+                "--default-track",
+                "0:" + track["default"],
+                "nightmode-loudnorm-" + track["id"] + "." + extension,
+                "--track-name",
+                "0:" + track["nightmodeDrcName"],
+                "--language",
+                "0:" + track["language"],
+                "--default-track",
+                "0:" + track["default"],
+                "nightmode-drc-" + track["id"] + "." + extension,
             ]
 
-    if 'subs' in info:
-        for track in info['subs']:
-            extension = track['extension']
+    if "subs" in info:
+        for track in info["subs"]:
+            extension = track["extension"]
 
             cmd += [
-                '--track-name', '0:' + track['title'], '--language',
-                '0:' + track['language'], '--default-track',
-                '0:' + track['default'],
-                'subtitles-' + track['id'] + '.' + extension
+                "--track-name",
+                "0:" + track["title"],
+                "--language",
+                "0:" + track["language"],
+                "--default-track",
+                "0:" + track["default"],
+                "subtitles-" + track["id"] + "." + extension,
             ]
 
-    if os.path.isfile('chapters.xml'):
-        cmd += ['--chapters', 'chapters.xml']
+    if os.path.isfile("chapters.xml"):
+        cmd += ["--chapters", "chapters.xml"]
 
     print(" ".join(cmd))
 
@@ -216,14 +234,14 @@ def mergeMKV(info):
 
 
 def encodeVideo(info):
-    sourceFile = info['sourceFile']
+    sourceFile = info["sourceFile"]
     # VapourSynth stuff
     videoInfo = encodeInfo.encodeInfo(sourceFile)
 
-    if not info['video']['convert']:
+    if not info["video"]["convert"]:
         # Assume video in on track 0.
         mkvOutTrack = "0:" + videoInfo.getEncodeFile()
-        cmd = ["mkvextract", info['sourceFile'], 'tracks', mkvOutTrack]
+        cmd = ["mkvextract", info["sourceFile"], "tracks", mkvOutTrack]
 
         # Print extract command
         print(" ".join(cmd))
@@ -243,11 +261,11 @@ def encodeVideo(info):
     core = videoInfo.getVSCore()
     video = videoInfo.vapoursynthFilter()
 
-    if 'subs' in info:
-        for sub in info['subs']:
-            supFile = 'subtitles-forced-' + sub['id'] + '.sup'
+    if "subs" in info:
+        for sub in info["subs"]:
+            supFile = "subtitles-forced-" + sub["id"] + ".sup"
             if os.path.isfile(supFile):
-                print("Hardcoding Forced Subtitle id:", sub['id'])
+                print("Hardcoding Forced Subtitle id:", sub["id"])
                 video = core.sub.ImageFile(video, supFile)
                 break
 
@@ -259,6 +277,10 @@ def encodeVideo(info):
     # CTRTL-C won't work normally when x265 is used via subprocess.
     # x265 will exit, but the python process will not react to the signal.
     t = threading.Thread(target=encodeThread, args=(video, cmd))
+
+    if not encodeProcess:
+        print("Error: failed to create encodeProcess!")
+        exit(1)
 
     # This will close the python/vapoursynth thread first which will then
     # cause the encoder to exit via EOF.
@@ -273,65 +295,67 @@ def encodeVideo(info):
 
 def prepForcedSubs(info):
     if "subs" in info:
-        subs = info['subs']
+        subs = info["subs"]
     else:
         return 0
 
     for track in subs:
-        if not os.path.isfile("subtitles-" + track['id'] + '.sup'):
+        if not os.path.isfile("subtitles-" + track["id"] + ".sup"):
             print("Subtitles doesn't exist!")
             return 0
 
         cmd = BDSUP2SUB
         cmd += [
-            '--forced-only', '--output',
-            'subtitles-forced-' + track['id'] + '.sup',
-            'subtitles-' + track['id'] + '.sup'
+            "--forced-only",
+            "--output",
+            "subtitles-forced-" + track["id"] + ".sup",
+            "subtitles-" + track["id"] + ".sup",
         ]
         p = sp.Popen(cmd, stdout=sp.DEVNULL, stderr=sp.DEVNULL)
         p.communicate()
-        print("Checking if 'subtitles-" + track['id'] +
-              ".sup' has forced subs")
-        if os.path.isfile('subtitles-forced-' + track['id'] + '.sup'):
-            sourceFile = 'subtitles-' + track['id'] + '.sup'
-            os.mkdir('subtitles')
-            os.chdir('subtitles')
+        print("Checking if 'subtitles-" + track["id"] + ".sup' has forced subs")
+        if os.path.isfile("subtitles-forced-" + track["id"] + ".sup"):
+            sourceFile = "subtitles-" + track["id"] + ".sup"
+            os.mkdir("subtitles")
+            os.chdir("subtitles")
             cmd = BDSUP2SUB
-            cmd += [
-                '--output', 'subtitles.xml',
-                os.path.join('..', sourceFile)
-            ]
+            cmd += ["--output", "subtitles.xml", os.path.join("..", sourceFile)]
             print("Exporting to BDXML.")
             p = sp.Popen(cmd, stdout=sp.DEVNULL, stderr=sp.DEVNULL)
             p.communicate()
 
             print("Swapping forced subtitle flag.")
-            tree = ET.parse('subtitles.xml')
+            tree = ET.parse("subtitles.xml")
             root = tree.getroot()
-            for event in root.iter('Event'):
-                if event.attrib['Forced'] in 'False':
+            for event in root.iter("Event"):
+                if event.attrib["Forced"] in "False":
                     event.set("Forced", "True")
                 else:
                     event.set("Forced", "False")
-            tree.write('subtitles-new.xml')
+            tree.write("subtitles-new.xml")
             os.chdir("..")
             print("Exporting to", sourceFile)
             cmd = BDSUP2SUB
             cmd += [
-                '--forced-only', '--output', 'subtitles-temp.sup',
-                os.path.join('subtitles', 'subtitles-new.xml')
+                "--forced-only",
+                "--output",
+                "subtitles-temp.sup",
+                os.path.join("subtitles", "subtitles-new.xml"),
             ]
             p = sp.Popen(cmd, stdout=sp.DEVNULL, stderr=sp.DEVNULL)
             p.communicate()
             cmd = BDSUP2SUB
             cmd += [
-                '--force-all', 'clear', '--output', sourceFile,
-                'subtitles-temp.sup'
+                "--force-all",
+                "clear",
+                "--output",
+                sourceFile,
+                "subtitles-temp.sup",
             ]
             p = sp.Popen(cmd, stdout=sp.DEVNULL, stderr=sp.DEVNULL)
             p.communicate()
-            shutil.rmtree('subtitles', ignore_errors=True)
-            os.remove('subtitles-temp.sup')
+            shutil.rmtree("subtitles", ignore_errors=True)
+            os.remove("subtitles-temp.sup")
 
 
 # from: https://github.com/Tatsh/ffmpeg-progress/blob/master/ffmpeg_progress.py
@@ -339,64 +363,98 @@ def ffprobe(in_file):
     """ffprobe font-end."""
     return dict(
         json.loads(
-            sp.check_output(('ffprobe', '-v', 'quiet', '-print_format', 'json',
-                             '-show_format', '-show_streams', in_file),
-                            encoding='utf-8')))
+            sp.check_output(
+                (
+                    "ffprobe",
+                    "-v",
+                    "quiet",
+                    "-print_format",
+                    "json",
+                    "-show_format",
+                    "-show_streams",
+                    in_file,
+                ),
+                encoding="utf-8",
+            )
+        )
+    )
 
 
 def getSamplerate(inFile):
-    return ffprobe(inFile)['streams'][0]['sample_rate']
+    return ffprobe(inFile)["streams"][0]["sample_rate"]
 
 
 def getMaxdB(inFile):
     cmd = [
-        'ffmpeg', '-i', inFile, '-acodec', 'pcm_s16le', '-af', 'volumedetect',
-        '-f', 'null', 'null'
+        "ffmpeg",
+        "-i",
+        inFile,
+        "-acodec",
+        "pcm_s16le",
+        "-af",
+        "volumedetect",
+        "-f",
+        "null",
+        "null",
     ]
-    p = sp.Popen(cmd,
-                 stdout=sp.PIPE,
-                 stderr=sp.STDOUT,
-                 universal_newlines=True)
+    p = sp.Popen(cmd, stdout=sp.PIPE, stderr=sp.STDOUT, universal_newlines=True)
+
+    if not p.stdout:
+        print("Error: failed to start", cmd[0])
+        exit(1)
+
+    temp = ""
     for line in p.stdout:
         line = line.rstrip()
-        if 'max_volume' in line:
+        if "max_volume" in line:
             temp = line
     print()
-    return temp[temp.index(':') + 2:-3]
+    return temp[temp.index(":") + 2 : -3]
 
 
 def ffmpegAudio(cmd, inFile, trackid):
-    print("Total Duration : ", end='')
+    print("Total Duration : ", end="")
     if trackid is not None:
-        tags = ffprobe(inFile)['streams'][int(trackid)]['tags']
+        tags = ffprobe(inFile)["streams"][int(trackid)]["tags"]
     else:
-        tags = ffprobe(inFile)['streams'][0]
-    if 'duration' in tags:
-        durationSec = int(tags['duration'].split('.')[0])
-        durationMili = tags['duration'].split('.')[1]
-        duration = time.strftime('%H:%M:%S', time.gmtime(durationSec))
-        duration += '.' + durationMili
+        tags = ffprobe(inFile)["streams"][0]
+    if "duration" in tags:
+        durationSec = int(tags["duration"].split(".")[0])
+        durationMili = tags["duration"].split(".")[1]
+        duration = time.strftime("%H:%M:%S", time.gmtime(durationSec))
+        duration += "." + durationMili
         print(duration)
     else:
-        print(tags['DURATION-eng'])
+        print(tags["DURATION-eng"])
     print(" ".join(cmd))
-    p = sp.Popen(cmd,
-                 stderr=sp.STDOUT,
-                 stdout=sp.PIPE,
-                 universal_newlines=True)
+    p = sp.Popen(cmd, stderr=sp.STDOUT, stdout=sp.PIPE, universal_newlines=True)
+
+    if not p.stdout:
+        print("Error: failed to start", cmd[0])
+        exit(1)
+
     for line in p.stdout:
         line = line.rstrip()
-        if 'size=' in line:
-            print(f'{line}\r', end='')
+        if "size=" in line:
+            print(f"{line}\r", end="")
     print()
 
 
 def flacToM4a(outFile):
     print("Converting flac to m4a")
-    m4aFile = outFile.split('.flac')[0] + '.m4a'
+    m4aFile = outFile.split(".flac")[0] + ".m4a"
     cmd = [
-        'ffmpeg', '-i', outFile, '-acodec', 'aac', '-b:a', '256K', '-movflags',
-        'faststart', '-y', m4aFile
+        "ffmpeg",
+        "-i",
+        outFile,
+        "-acodec",
+        "aac",
+        "-b:a",
+        "256K",
+        "-movflags",
+        "faststart",
+        "-y",
+        m4aFile,
     ]
     ffmpegAudio(cmd, outFile, None)
     os.remove(outFile)
@@ -404,21 +462,30 @@ def flacToM4a(outFile):
 
 def normAudio(inFile, outFile, codec, maxdB):
     maxVolume = getMaxdB(inFile)
-    if maxVolume != '0.0':
+    if maxVolume != "0.0":
         volumeAdj = float(maxdB) - float(maxVolume)
     else:
         print("Already Normalized")
         return False
     print("Adjusting Volume by:", volumeAdj)
     cmd = [
-        'ffmpeg', '-y', '-i', inFile, '-acodec', 'flac', '-compression_level',
-        '8', '-af', 'volume=' + str(volumeAdj) + 'dB', outFile
+        "ffmpeg",
+        "-y",
+        "-i",
+        inFile,
+        "-acodec",
+        "flac",
+        "-compression_level",
+        "8",
+        "-af",
+        "volume=" + str(volumeAdj) + "dB",
+        outFile,
     ]
     ffmpegAudio(cmd, inFile, None)
     verifyVol = getMaxdB(outFile)
     if verifyVol == maxdB:
         print("Normalize Complete")
-        if codec == 'aac':
+        if codec == "aac":
             flacToM4a(outFile)
         return True
     else:
@@ -430,20 +497,33 @@ def nightmodeTrack(inFile, outFile, codec, withDRC, maxdB):
     surVol = "{}".format(SUR_CHANNEL_VOL)
     lfeVol = "{}".format(LFE_CHANNEL_VOL)
 
-    ffPanFilterL = 'FL=FC+{s}*FL+{s}*FLC+{s}*BL+{s}*SL+{l}*LFE'.format(s=surVol,
-                                                                       l=lfeVol)
-    ffPanFilterR = 'FR=FC+{s}*FR+{s}*FRC+{s}*BR+{s}*SR+{l}*LFE'.format(s=surVol,
-                                                                       l=lfeVol)
-    normfile = 'prenorm.flac'
-    ffFilter = 'pan=stereo|{}|{}'.format(ffPanFilterL, ffPanFilterR)
+    ffPanFilterL = "FL=FC+{s}*FL+{s}*FLC+{s}*BL+{s}*SL+{l}*LFE".format(
+        s=surVol, l=lfeVol
+    )
+    ffPanFilterR = "FR=FC+{s}*FR+{s}*FRC+{s}*BR+{s}*SR+{l}*LFE".format(
+        s=surVol, l=lfeVol
+    )
+    normfile = "prenorm.flac"
+    ffFilter = "pan=stereo|{}|{}".format(ffPanFilterL, ffPanFilterR)
     if withDRC:
-        ffFilter += ',acompressor=ratio=4,loudnorm'
+        ffFilter += ",acompressor=ratio=4,loudnorm"
     else:
-        ffFilter += ',loudnorm'
+        ffFilter += ",loudnorm"
     samplerate = getSamplerate(inFile)
     cmd = [
-        'ffmpeg', '-i', inFile, '-acodec', 'flac', '-compression_level', '8',
-        '-af', ffFilter, '-ar', samplerate, '-y', normfile
+        "ffmpeg",
+        "-i",
+        inFile,
+        "-acodec",
+        "flac",
+        "-compression_level",
+        "8",
+        "-af",
+        ffFilter,
+        "-ar",
+        samplerate,
+        "-y",
+        normfile,
     ]
     ffmpegAudio(cmd, inFile, None)
     normalized = normAudio(normfile, outFile, codec, maxdB)
@@ -452,15 +532,15 @@ def nightmodeTrack(inFile, outFile, codec, withDRC, maxdB):
 
 
 def createNightmodeTracks(info):
-    audio = info['audio']
+    audio = info["audio"]
     for track in audio:
-        if "yes" in track['nightmode']:
-            print('Creating nightmode tracks for trackid:', track['id'])
-            codec = track['nightmodeCodec']
-            extension = track['extension']
-            inFile = 'audio-' + track['id'] + '.' + extension
-            loudnormFile = 'nightmode-loudnorm-' + track['id'] + '.flac'
-            DRCFile = 'nightmode-drc-' + track['id'] + '.flac'
+        if "yes" in track["nightmode"]:
+            print("Creating nightmode tracks for trackid:", track["id"])
+            codec = track["nightmodeCodec"]
+            extension = track["extension"]
+            inFile = "audio-" + track["id"] + "." + extension
+            loudnormFile = "nightmode-loudnorm-" + track["id"] + ".flac"
+            DRCFile = "nightmode-drc-" + track["id"] + ".flac"
             print("Creating 'Loudnorm' track.")
             nightmodeTrack(inFile, loudnormFile, codec, False, MAXDB)
             print("Creating 'DRC+Loudnorm' track.")
@@ -468,41 +548,36 @@ def createNightmodeTracks(info):
 
 
 def extractTracks(info):
-    sourceFile = info['sourceFile']
-    audio = info['audio']
+    sourceFile = info["sourceFile"]
+    audio = info["audio"]
     if "subs" in info:
-        subs = info['subs']
+        subs = info["subs"]
     else:
         subs = 0
 
-    cmd = ['ffmpeg', '-y', '-i', sourceFile]
+    cmd = ["ffmpeg", "-y", "-i", sourceFile]
     for track in audio:
-        if "yes" in track['convert']:
-            extension = track['extension']
-            cmd += ['-map', '0:' + track['id']]
-            cmd += track['ffmpegopts']
-            cmd += ['audio-' + track['id'] + '.' + extension]
+        if "yes" in track["convert"]:
+            extension = track["extension"]
+            cmd += ["-map", "0:" + track["id"]]
+            cmd += track["ffmpegopts"]
+            cmd += ["audio-" + track["id"] + "." + extension]
 
             print("Converting Audio via ffmpeg")
-            ffmpegAudio(cmd, sourceFile, track['id'])
+            ffmpegAudio(cmd, sourceFile, track["id"])
 
-    cmd = ['mkvextract', sourceFile, 'tracks']
+    cmd = ["mkvextract", sourceFile, "tracks"]
     for track in audio:
-        if "no" in track['convert']:
-            extension = track['extension']
-            cmd += [
-                track['id'] + ':' + 'audio-' + track['id'] + '.' + extension
-            ]
+        if "no" in track["convert"]:
+            extension = track["extension"]
+            cmd += [track["id"] + ":" + "audio-" + track["id"] + "." + extension]
 
     if subs != 0:
         for track in subs:
-            extension = track['extension']
-            cmd += [
-                track['id'] + ':' + 'subtitles-' + track['id'] + '.' +
-                extension
-            ]
+            extension = track["extension"]
+            cmd += [track["id"] + ":" + "subtitles-" + track["id"] + "." + extension]
 
-    cmd += ['chapters', 'chapters.xml']
+    cmd += ["chapters", "chapters.xml"]
 
     print("\nExtracting tracks via mkvextract.")
     print(" ".join(cmd))
@@ -512,9 +587,10 @@ def extractTracks(info):
 
 def getInfo(infoFile):
     try:
-        info = json.load(open(infoFile, 'r'))
+        info = json.load(open(infoFile, "r"))
     except IOError:
         print("Error:", infoFile, "not found.")
+        exit(1)
 
     return info
 
@@ -526,12 +602,12 @@ def cleanPythonCache(path):
         exit(1)
 
     # Search and delete .pyc and .pyo files
-    for p in pathlib.Path(path).rglob('*.py[co]'):
+    for p in pathlib.Path(path).rglob("*.py[co]"):
         print("Deleting:", p)
         p.unlink()
 
     # Search and delete '__pycache__' directories
-    for p in pathlib.Path(path).rglob('__pycache__'):
+    for p in pathlib.Path(path).rglob("__pycache__"):
         print("Deleting:", p)
         p.rmdir()
 

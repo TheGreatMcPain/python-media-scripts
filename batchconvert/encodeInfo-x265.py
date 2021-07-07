@@ -16,7 +16,7 @@ without cluttering up the main script.
 "batchencode will call 'vapoursynthFilter' just to be clear."
 """
 
-VIDEO_ENCODE_NAME = 'video.h265'
+VIDEO_ENCODE_NAME = "video.h265"
 # Change this to get VapourSynth's buffer size. (in MB)
 VSCORE_MEM_CACHE_MAX = 1024
 
@@ -31,7 +31,7 @@ class encodeInfo:
         video = core.ffms2.Source(source=self.sourcefile)
         video = core.std.CropRel(video, top=140, bottom=140)
         video = haf.GSMC(video, thSAD=150, radius=2)
-        video = core.f3kdb.Deband(video, dynamic_grain=True, preset='Low')
+        video = core.f3kdb.Deband(video, dynamic_grain=True, preset="Low")
         video = core.std.AddBorders(video, top=140, bottom=140)
         return video
 
@@ -42,10 +42,28 @@ class encodeInfo:
         video = self.vapoursynthFilter()
         framecount = video.num_frames
         cmd = [
-            'x265', '--y4m', '--preset', 'medium', '--crf', '16', '--qcomp',
-            '0.75', '--output-depth', '10', '--range', 'limited',
-            '--colorprim', 'bt709', '--transfer', 'bt709', '--frames',
-            str(framecount), '--input', '-', '--output', VIDEO_ENCODE_NAME
+            "x265",
+            "--y4m",
+            "--preset",
+            "medium",
+            "--crf",
+            "16",
+            "--qcomp",
+            "0.75",
+            "--output-depth",
+            "10",
+            "--range",
+            "limited",
+            "--colorprim",
+            "bt709",
+            "--transfer",
+            "bt709",
+            "--frames",
+            str(framecount),
+            "--input",
+            "-",
+            "--output",
+            VIDEO_ENCODE_NAME,
         ]
         return cmd
 
@@ -72,7 +90,8 @@ class encodeVideo:
             self.thread.start()
             self.thread.join()
         except KeyboardInterrupt:
-            self.process.stdin.close()
+            if self.process.stdin:
+                self.process.stdin.close()
             pass
 
 
@@ -82,21 +101,21 @@ if __name__ == "__main__":
         print("Usage:", sys.argv[0], " <in-file> <encode>")
         print()
         print("    <in-file> Is the video file")
-        print("    <encode> can be nothing or a \"y\"")
+        print('    <encode> can be nothing or a "y"')
         exit(1)
 
     # Tries to mimic vspipe's --info option.
     info = encodeInfo(sys.argv[1])
     video = info.vapoursynthFilter()
-    print('Width:', video.width)
-    print('Height:', video.height)
-    print('FPS:', video.fps)
-    print('Format Name:', video.format.name)
-    print('Color Family:', str(video.format.color_family).split('.')[-1])
-    print('Sample Type:', str(video.format.sample_type).split('.')[-1])
-    print('Bits:', video.format.bits_per_sample)
-    print('SubSampling W:', video.format.subsampling_w)
-    print('SubSampling H:', video.format.subsampling_h)
+    print("Width:", video.width)
+    print("Height:", video.height)
+    print("FPS:", video.fps)
+    print("Format Name:", video.format.name)
+    print("Color Family:", str(video.format.color_family).split(".")[-1])
+    print("Sample Type:", str(video.format.sample_type).split(".")[-1])
+    print("Bits:", video.format.bits_per_sample)
+    print("SubSampling W:", video.format.subsampling_w)
+    print("SubSampling H:", video.format.subsampling_h)
 
     if len(sys.argv) == 3:
         if sys.argv[2].lower() == "y":
