@@ -109,18 +109,25 @@ def getMaxdB(inFile):
 
 def ffmpegAudio(cmd, inFile, trackid):
     print("Total Duration : ", end="")
+    info = ffprobe(inFile)
     if trackid is not None:
-        tags = ffprobe(inFile)["streams"][int(trackid)]["tags"]
+        tags = info["streams"][int(trackid)]
     else:
-        tags = ffprobe(inFile)["streams"][0]
+        tags = info["streams"][0]
+    if "tags" in tags:
+        tags = tags["tags"]
     if "duration" in tags:
         durationSec = int(tags["duration"].split(".")[0])
         durationMili = tags["duration"].split(".")[1]
         duration = time.strftime("%H:%M:%S", time.gmtime(durationSec))
         duration += "." + durationMili
         print(duration)
-    else:
+    elif "DURATION" in tags:
+        print(tags["DURATION"])
+    elif "DURATION-eng" in tags:
         print(tags["DURATION-eng"])
+    else:
+        print("UNKNOWN (try remuxing audio into a container like .mka, .m4a, etc.)")
     for x in cmd:
         print(x, end=" ")
     print()
