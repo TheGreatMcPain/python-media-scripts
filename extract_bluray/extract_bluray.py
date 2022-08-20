@@ -102,7 +102,6 @@ def getBlurayInfo(BluRayDir, jsonFile):
     blurayInfo = {}
     blurayInfo['blurayDir'] = BluRayDir
     titles = []
-    mainBool = False
 
     print("BluRay Root:", BluRayDir)
     while True:
@@ -115,16 +114,17 @@ def getBlurayInfo(BluRayDir, jsonFile):
         if not titleExists(BluRayDir, fileName):
             print(fileName, "does not exist.")
             continue
-        main = 'n'
-        if not mainBool:
-            main = input("Is this the main title (y or n): ")
-        if 'y' in main:
-            mainBool = True
-            title['main'] = 'yes'
-            title['folder'] = 'main'
-        else:
+        extra = input("Is this an extra feature (y or n): ")
+        while extra.lower() not in ['y', 'n']:
+            print("Invalid input: must be 'y' or 'n'")
+            extra = input("Is this an extra feature (y or n): ")
+        if 'y' in extra.lower():
             title['main'] = 'no'
-            folder = input("Type the folder name for these title: ")
+            folder = input("Type the folder name for this title: ")
+            title['folder'] = folder
+        else:
+            title['main'] = 'yes'
+            folder = input("Type the folder name for this title: ")
             title['folder'] = folder
         title['filename'] = fileName
         titles.append(title)
