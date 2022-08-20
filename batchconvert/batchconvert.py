@@ -33,8 +33,9 @@ BDSUP2SUB = ["bdsup2sub++"]
 MAXDB = "-0.5"
 
 # Nightmode Downmixing settings.
-SUR_CHANNEL_VOL = 0.60  # Volume level to set the non-center channels to.
-LFE_CHANNEL_VOL = 0.60  # Volume to set the LFE channel to.
+SUR_CHANNEL_VOL = 0.707  # Volume level to set the non-center channels to.
+LFE_CHANNEL_VOL = 1.0  # Volume to set the LFE channel to.
+CENTER_CHANNEL_VOL = 1.0 # Volume to set the center channel to.
 
 
 def main():
@@ -414,18 +415,25 @@ def getMaxdB(inFile):
 
 def ffmpegAudio(cmd, inFile, trackid):
     print("Total Duration : ", end="")
+    info = ffprobe(inFile)
     if trackid is not None:
-        tags = ffprobe(inFile)["streams"][int(trackid)]["tags"]
+        tags = info["streams"][int(trackid)]
     else:
-        tags = ffprobe(inFile)["streams"][0]
+        tags = info["streams"][0]
+    if "tags" in tags:
+        tags = tags["tags"]
     if "duration" in tags:
         durationSec = int(tags["duration"].split(".")[0])
         durationMili = tags["duration"].split(".")[1]
         duration = time.strftime("%H:%M:%S", time.gmtime(durationSec))
         duration += "." + durationMili
         print(duration)
-    else:
+    elif "DURATION" in tags:
+        print(tags["DURATION"])
+    elif "DURATION-eng" in tags:
         print(tags["DURATION-eng"])
+    else:
+        print("UNKNOWN (try remuxing audio into a .mka container)")
     print(" ".join(cmd))
     p = sp.Popen(cmd, stderr=sp.STDOUT, stdout=sp.PIPE, universal_newlines=True)
 
@@ -458,6 +466,21 @@ def flacToM4a(outFile):
     ]
     ffmpegAudio(cmd, outFile, None)
     os.remove(outFile)
+
+
+def getffFilter(surVol: float, lfeVol: float, centerVol: float):
+    surVolStr = "{}".format(surVol)
+    lfeVolStr = "{}".format(lfeVol / 2)
+    centerVolStr = "{}".format(centerVol / 2)
+
+    ffPanFilterL = "FL={c}*FC+{s}*FL+{s}*FLC+{s}*BL+{s}*SL+{l}*LFE".format(
+        c=centerVolStr, s=surVolStr, l=lfeVolStr
+    )
+    ffPanFilterR = "FR={c}*FC+{s}*FR+{s}*FRC+{s}*BR+{s}*SR+{l}*LFE".format(
+        c=centerVolStr, s=surVolStr, l=lfeVolStr
+    )
+
+    return "pan=stereo|{}|{}".format(ffPanFilterL, ffPanFilterR)
 
 
 def normAudio(inFile, outFile, codec, maxdB):
@@ -493,21 +516,12 @@ def normAudio(inFile, outFile, codec, maxdB):
         exit()
 
 
-def nightmodeTrack(inFile, outFile, codec, withDRC, maxdB):
-    surVol = "{}".format(SUR_CHANNEL_VOL)
-    lfeVol = "{}".format(LFE_CHANNEL_VOL)
-
-    ffPanFilterL = "FL=FC+{s}*FL+{s}*FLC+{s}*BL+{s}*SL+{l}*LFE".format(
-        s=surVol, l=lfeVol
-    )
-    ffPanFilterR = "FR=FC+{s}*FR+{s}*FRC+{s}*BR+{s}*SR+{l}*LFE".format(
-        s=surVol, l=lfeVol
-    )
+def nightmodeTrack(inFile, outFile, codec, withLoudNorm, withDRC, maxdB):
     normfile = "prenorm.flac"
-    ffFilter = "pan=stereo|{}|{}".format(ffPanFilterL, ffPanFilterR)
+    ffFilter = getffFilter(SUR_CHANNEL_VOL, LFE_CHANNEL_VOL, CENTER_CHANNEL_VOL)
     if withDRC:
-        ffFilter += ",acompressor=ratio=4,loudnorm"
-    else:
+        ffFilter += ",acompressor=ratio=4"
+    if withLoudNorm:
         ffFilter += ",loudnorm"
     samplerate = getSamplerate(inFile)
     cmd = [
@@ -529,6 +543,8 @@ def nightmodeTrack(inFile, outFile, codec, withDRC, maxdB):
     normalized = normAudio(normfile, outFile, codec, maxdB)
     if normalized:
         os.remove(normfile)
+    else:
+        os.rename(normfile, outFile)
 
 
 def createNightmodeTracks(info):
