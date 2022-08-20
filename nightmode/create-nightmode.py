@@ -229,6 +229,8 @@ def nightmodeTrack(inFile, outFile, codec, withLoudNorm, withDRC, maxdB):
     normalized = normAudio(normfile, outFile, codec, maxdB)
     if normalized:
         os.remove(normfile)
+    else:
+        os.rename(normfile, outFile)
 
 
 def createNightmodeTracks(codec, ext, inFile):
