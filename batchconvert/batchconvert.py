@@ -286,10 +286,6 @@ def encodeVideo(info):
     # x265 will exit, but the python process will not react to the signal.
     t = threading.Thread(target=encodeThread, args=(video, cmd))
 
-    if not encodeProcess:
-        print("Error: failed to create encodeProcess!")
-        exit(1)
-
     # This will close the python/vapoursynth thread first which will then
     # cause the encoder to exit via EOF.
     try:
@@ -297,7 +293,8 @@ def encodeVideo(info):
         t.join()  # Wait for the encode to finish.
     except KeyboardInterrupt:
         # Close the processes stdin, because x265 doesn't do it by itself.
-        encodeProcess.stdin.close()
+        if encodeProcess:
+            encodeProcess.stdin.close()
         exit(0)
 
 
