@@ -94,11 +94,16 @@ def getMaxdB(inFile):
         "null",
     ]
     p = sp.Popen(cmd, stdout=sp.PIPE, stderr=sp.STDOUT, universal_newlines=True)
+    temp = None
+    if not p.stdout:
+        return "0.0"
     for line in p.stdout:
         line = line.rstrip()
         if "max_volume" in line:
             temp = line
     print()
+    if temp == None:
+        return "0.0"
     return temp[temp.index(":") + 2 : -3]
 
 
@@ -120,6 +125,8 @@ def ffmpegAudio(cmd, inFile, trackid):
         print(x, end=" ")
     print()
     p = sp.Popen(cmd, stderr=sp.STDOUT, stdout=sp.PIPE, universal_newlines=True)
+    if not p.stdout:
+        return None
     for line in p.stdout:
         line = line.rstrip()
         if "size=" in line:
@@ -148,15 +155,15 @@ def flacToM4a(outFile):
 
 
 def getffFilter(surVol: float, lfeVol: float, centerVol: float):
-    surVol = "{}".format(surVol)
-    lfeVol = "{}".format(lfeVol / 2)
-    centerVol = "{}".format(centerVol / 2)
+    surVolStr = "{}".format(surVol)
+    lfeVolStr = "{}".format(lfeVol / 2)
+    centerVolStr = "{}".format(centerVol / 2)
 
     ffPanFilterL = "FL={c}*FC+{s}*FL+{s}*FLC+{s}*BL+{s}*SL+{l}*LFE".format(
-        c=centerVol, s=surVol, l=lfeVol
+        c=centerVolStr, s=surVolStr, l=lfeVolStr
     )
     ffPanFilterR = "FR={c}*FC+{s}*FR+{s}*FRC+{s}*BR+{s}*SR+{l}*LFE".format(
-        c=centerVol, s=surVol, l=lfeVol
+        c=centerVolStr, s=surVolStr, l=lfeVolStr
     )
 
     return "pan=stereo|{}|{}".format(ffPanFilterL, ffPanFilterR)
