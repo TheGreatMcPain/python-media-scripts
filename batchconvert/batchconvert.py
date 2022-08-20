@@ -196,6 +196,13 @@ def mergeMKV(info):
                 extension = "m4a"
             cmd += [
                 "--track-name",
+                "0:" + track["nightmodeDownmixOnlyName"],
+                "--language",
+                "0:" + track["language"],
+                "--default-track",
+                "0:" + track["default"],
+                "nightmode-" + track["id"] + "." + extension,
+                "--track-name",
                 "0:" + track["nightmodeLoudnormName"],
                 "--language",
                 "0:" + track["language"],
@@ -555,12 +562,15 @@ def createNightmodeTracks(info):
             codec = track["nightmodeCodec"]
             extension = track["extension"]
             inFile = "audio-" + track["id"] + "." + extension
+            downmixFile = "nightmode-" + track["id"] + ".flac"
             loudnormFile = "nightmode-loudnorm-" + track["id"] + ".flac"
             DRCFile = "nightmode-drc-" + track["id"] + ".flac"
+            print("Creating 'DownmixOnly' track.")
+            nightmodeTrack(inFile, downmixFile, codec, True, False, MAXDB)
             print("Creating 'Loudnorm' track.")
-            nightmodeTrack(inFile, loudnormFile, codec, False, MAXDB)
+            nightmodeTrack(inFile, loudnormFile, codec, True, False, MAXDB)
             print("Creating 'DRC+Loudnorm' track.")
-            nightmodeTrack(inFile, DRCFile, codec, True, MAXDB)
+            nightmodeTrack(inFile, DRCFile, codec, True, True, MAXDB)
 
 
 def extractTracks(info):
