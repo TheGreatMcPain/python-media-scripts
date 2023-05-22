@@ -176,7 +176,7 @@ def getffFilter(surVol: float, lfeVol: float, centerVol: float):
     return "pan=stereo|{}|{}".format(ffPanFilterL, ffPanFilterR)
 
 
-def normAudio(inFile, outFile, codec, maxdB):
+def normAudio(inFile, outFile, maxdB):
     maxVolume = getMaxdB(inFile)
     if maxVolume != "0.0":
         volumeAdj = float(maxdB) - float(maxVolume)
@@ -201,8 +201,6 @@ def normAudio(inFile, outFile, codec, maxdB):
     verifyVol = getMaxdB(outFile)
     if verifyVol == maxdB:
         print("Normalize Complete")
-        if codec == "aac":
-            flacToM4a(outFile)
         return True
     else:
         print("Volume doesn't match desired result.")
@@ -233,11 +231,13 @@ def nightmodeTrack(inFile, outFile, codec, withLoudNorm, withDRC, maxdB):
         normfile,
     ]
     ffmpegAudio(cmd, inFile, None)
-    normalized = normAudio(normfile, outFile, codec, maxdB)
+    normalized = normAudio(normfile, outFile, maxdB)
     if normalized:
         os.remove(normfile)
     else:
         os.rename(normfile, outFile)
+    if codec == "aac":
+        flacToM4a(outFile)
 
 
 def createNightmodeTracks(codec, ext, inFile):
