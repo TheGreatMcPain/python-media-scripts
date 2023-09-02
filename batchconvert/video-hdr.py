@@ -48,6 +48,13 @@ def main():
         help="Process HDR+ metadata",
     )
     parser.set_defaults(hdr_plus=False)
+    parser.add_argument(
+        "--bt709",
+        dest="bt709",
+        action=argparse.BooleanOptionalAction,
+        help="Use bt709 instead of bt2020",
+    )
+    parser.set_defaults(bt709=False)
 
     args = parser.parse_args()
 
@@ -64,6 +71,7 @@ def main():
         args.dolby_vision,
         args.dolby_vision_track,
         args.hdr_plus,
+        args.bt709,
     )
 
 
@@ -242,6 +250,7 @@ def encode_video_x265(
     dolby_vision: bool,
     dolby_vision_track: bool,
     hdrplus: bool,
+    bt709: bool,
 ):
     master_display_info = get_x265_master_display_string(input_file)
 
@@ -271,11 +280,14 @@ def encode_video_x265(
 
     hdrplus_x265_opts = ["--dhdr10-info=" + hdrplus_metadata]
 
-    hdr_x265_opts = [
+    tenbit_x265_opts = [
         "--input-depth",
         "10",
         "--output-depth",
         "10",
+    ]
+
+    hdr_x265_opts = [
         "--hdr10-opt",
         "--master-display",
         master_display_info["master_display"],
@@ -283,13 +295,24 @@ def encode_video_x265(
         master_display_info["content_light_level"],
     ]
 
-    color_x265_opts = [
+    bt2020_x265_opts = [
         "--colorprim",
         "bt2020",
         "--transfer",
         "smpte2084",
         "--colormatrix",
         "bt2020nc",
+        "--range",
+        "limited",
+    ]
+
+    bt709_x265_opts = [
+        "--colorprim",
+        "bt709",
+        "--transfer",
+        "bt709",
+        "--colormatrix",
+        "bt709",
         "--range",
         "limited",
     ]
@@ -311,8 +334,12 @@ def encode_video_x265(
         "0.75",
     ]
 
-    cmd += hdr_x265_opts + color_x265_opts
+    cmd += tenbit_x265_opts + hdr_x265_opts
 
+    if bt709:
+        cmd += bt709_x265_opts
+    else:
+        cmd += bt2020_x265_opts
     if hdrplus:
         cmd += hdrplus_x265_opts
     if dolby_vision:
@@ -321,7 +348,9 @@ def encode_video_x265(
     video = get_vs_filter(input_file)
     cmd += ["--frames", str(video.num_frames)]
 
-    print(cmd)
+    print("==START x265 CMD==")
+    print(" ".join(cmd))
+    print("==END x265 CMD==")
 
     # ffmpeg_process = ffmpeg_video_stdout(input_file, False, True)
     x265_process = sp.Popen(cmd, stdin=sp.PIPE)
