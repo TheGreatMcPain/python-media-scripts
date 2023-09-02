@@ -15,6 +15,7 @@
       "ffmpegopts": ["-compression_level", "8", "-acodec", "flac"],
       "nightmode": "yes",
       "nightmodeCodec": "flac",
+      "nightmodeDownmixOnlyName": "Stereo Nightmode DownmixOnly (FLAC)",
       "nightmodeLoudnormName": "Stereo Nightmode Loudnorm (FLAC)",
       "nightmodeDrcName": "Stereo Nightmode DRC+Loudnorm (FLAC)",
       "default": "1",
