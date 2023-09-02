@@ -29,10 +29,10 @@ class encodeInfo:
         if VSCORE_MEM_CACHE_MAX is not None:
             core.max_cache_size = VSCORE_MEM_CACHE_MAX
         video = core.ffms2.Source(source=self.sourcefile)
-        video = core.std.CropRel(video, top=140, bottom=140)
-        video = haf.GSMC(video, thSAD=150, radius=2)
-        video = core.f3kdb.Deband(video, dynamic_grain=True, preset="Low")
-        video = core.std.AddBorders(video, top=140, bottom=140)
+        # video = core.std.CropRel(video, top=140, bottom=140)
+        # video = haf.GSMC(video, thSAD=150, radius=2)
+        # video = core.f3kdb.Deband(video, dynamic_grain=True, preset="Low")
+        # video = core.std.AddBorders(video, top=140, bottom=140)
         return video
 
     def getVSCore(self):
@@ -47,9 +47,11 @@ class encodeInfo:
             "--preset",
             "medium",
             "--crf",
-            "16",
+            "18",
             "--qcomp",
             "0.75",
+            "--tune",
+            "grain",
             "--output-depth",
             "10",
             "--range",
@@ -57,6 +59,8 @@ class encodeInfo:
             "--colorprim",
             "bt709",
             "--transfer",
+            "bt709",
+            "--colormatrix",
             "bt709",
             "--frames",
             str(framecount),
