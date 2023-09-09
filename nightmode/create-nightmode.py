@@ -51,7 +51,7 @@ def main():
 
 
 def Usage():
-    print("Usage:", sys.argv[0], "-c,--codec <flac,aac> -i,--input <input file>")
+    print("Usage:", sys.argv[0], "-c,--codec <flac,aac,both> -i,--input <input file>")
 
 
 # from: https://github.com/Tatsh/ffmpeg-progress/blob/master/ffmpeg_progress.py
@@ -141,7 +141,7 @@ def ffmpegAudio(cmd, inFile, trackid):
     print()
 
 
-def flacToM4a(outFile):
+def flacToM4a(outFile, keep=False):
     print("Converting flac to m4a")
     m4aFile = outFile.split(".flac")[0] + ".m4a"
     cmd = [
@@ -158,7 +158,8 @@ def flacToM4a(outFile):
         m4aFile,
     ]
     ffmpegAudio(cmd, outFile, None)
-    os.remove(outFile)
+    if not keep:
+        os.remove(outFile)
 
 
 def getffFilter(surVol: float, lfeVol: float, centerVol: float):
@@ -236,6 +237,8 @@ def nightmodeTrack(inFile, outFile, codec, withLoudNorm, withDRC, maxdB):
         os.remove(normfile)
     else:
         os.rename(normfile, outFile)
+    if codec == "both":
+        flacToM4a(outFile, True)
     if codec == "aac":
         flacToM4a(outFile)
 
