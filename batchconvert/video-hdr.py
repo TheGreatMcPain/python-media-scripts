@@ -164,7 +164,7 @@ def get_hdr_info_ffprobe(in_file):
                     "json",
                     "-show_format",
                     "-select_streams",
-                    "v",
+                    "v:0",
                     "-show_frames",
                     "-read_intervals",
                     "%+#1",
