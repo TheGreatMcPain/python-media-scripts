@@ -2,8 +2,6 @@
 # This script will grab HDR metadata from UHD bluray
 # and re-encode it using x265. HDR+ and Dolby Vision included.
 import subprocess as sp
-import os
-import psutil
 import json
 import shutil
 import argparse
@@ -12,6 +10,8 @@ import vapoursynth as vs
 core = vs.core
 
 # Process priority
+# import os
+# import psutil
 # ps = psutil.Process(os.getpid())
 # ps.nice(19)
 # ps.ionice(psutil.IOPRIO_CLASS_IDLE)
