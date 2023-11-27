@@ -35,12 +35,12 @@ def main():
     )
     parser.set_defaults(dolby_vision=False)
     parser.add_argument(
-        "--dolby-vision-track",
-        dest="dolby_vision_track",
+        "--dv-separate-layer",
+        dest="dv_separate_layer",
         action=argparse.BooleanOptionalAction,
         help="Dolby Vision is on separate track",
     )
-    parser.set_defaults(dolby_vision_track=False)
+    parser.set_defaults(dv_separate_layer=False)
     parser.add_argument(
         "--hdr-plus",
         dest="hdr_plus",
@@ -69,7 +69,7 @@ def main():
         args.input_file,
         args.output_file,
         args.dolby_vision,
-        args.dolby_vision_track,
+        args.dv_separate_layer,
         args.hdr_plus,
         args.bt709,
     )
@@ -248,7 +248,7 @@ def encode_video_x265(
     input_file: str,
     output_file: str,
     dolby_vision: bool,
-    dolby_vision_track: bool,
+    dv_separate_layer: bool,
     hdrplus: bool,
     bt709: bool,
 ):
@@ -265,7 +265,7 @@ def encode_video_x265(
         extract_hdr10plus_metadata(input_file, hdrplus_metadata)
     if dolby_vision:
         print("Extracting Dolby Vision metadata")
-        extract_dovi_rpu(input_file, dolby_vision_rpu, dolby_vision_track)
+        extract_dovi_rpu(input_file, dolby_vision_rpu, dv_separate_layer)
 
     dv_x265_opts = [
         "--dolby-vision-rpu",
