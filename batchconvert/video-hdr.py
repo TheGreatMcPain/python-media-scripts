@@ -28,27 +28,6 @@ def main():
         "--output", dest="output_file", type=str, help="Output HEVC file (hevc)"
     )
     parser.add_argument(
-        "--dolby-vision",
-        dest="dolby_vision",
-        action=argparse.BooleanOptionalAction,
-        help="Process Dolby Vision metadata",
-    )
-    parser.set_defaults(dolby_vision=False)
-    parser.add_argument(
-        "--dv-separate-layer",
-        dest="dv_separate_layer",
-        action=argparse.BooleanOptionalAction,
-        help="Dolby Vision is on separate track",
-    )
-    parser.set_defaults(dv_separate_layer=False)
-    parser.add_argument(
-        "--hdr-plus",
-        dest="hdr_plus",
-        action=argparse.BooleanOptionalAction,
-        help="Process HDR+ metadata",
-    )
-    parser.set_defaults(hdr_plus=False)
-    parser.add_argument(
         "--bt709",
         dest="bt709",
         action=argparse.BooleanOptionalAction,
@@ -68,9 +47,6 @@ def main():
     encode_video_x265(
         args.input_file,
         args.output_file,
-        args.dolby_vision,
-        args.dv_separate_layer,
-        args.hdr_plus,
         args.bt709,
     )
 
@@ -259,6 +235,50 @@ def get_x265_master_display_string(ffprobe_video_info):
     return results
 
 
+def is_dv_separate_layer(ffprobe_video_info):
+    # See if there is a second video track. (This is usually the Dolby Vision Layer)
+    frame_info = get_first_frame_info(ffprobe_video_info, stream_index=1)
+
+    if not frame_info:
+        return False
+
+    for side_data in frame_info["side_data_list"]:
+        if side_data["side_data_type"].lower() == "Dolby Vision Metadata".lower():
+            return True
+    return False
+
+
+def is_dolby_vision(ffprobe_video_info):
+    # Check for separate dolby vision enhancement layer.
+    if is_dv_separate_layer(ffprobe_video_info):
+        return True
+
+    frame_info = get_first_frame_info(ffprobe_video_info, stream_index=0)
+
+    if not frame_info:
+        return False
+
+    for side_data in frame_info["side_data_list"]:
+        if side_data["side_data_type"].lower() == "Dolby Vision Metadata".lower():
+            return True
+    return False
+
+
+def is_hdr10plus(ffprobe_video_info):
+    frame_info = get_first_frame_info(ffprobe_video_info, stream_index=0)
+
+    if not frame_info:
+        return False
+
+    for side_data in frame_info["side_data_list"]:
+        if (
+            side_data["side_data_type"].lower()
+            == "HDR Dynamic Metadata SMPTE2094-40 (HDR10+)".lower()
+        ):
+            return True
+    return False
+
+
 def get_vs_filter(input_file: str):
     video = core.ffms2.Source(source=input_file)
     return video
@@ -267,9 +287,6 @@ def get_vs_filter(input_file: str):
 def encode_video_x265(
     input_file: str,
     output_file: str,
-    dolby_vision: bool,
-    dv_separate_layer: bool,
-    hdrplus: bool,
     bt709: bool,
 ):
     video_info = get_ffprobe_info(input_file)
@@ -281,11 +298,17 @@ def encode_video_x265(
     hdrplus_metadata = input_file + "_hdrplus.json"
     dolby_vision_rpu = input_file + "_dv.rpu"
 
+    hdrplus = is_hdr10plus(video_info)
+    dolby_vision = is_dolby_vision(video_info)
+    dv_separate_layer = is_dv_separate_layer(video_info)
+
     if hdrplus:
-        print("Extracting HDR10+ metadata")
+        print("HDR10+ detected!!")
+        print("Extracting it with 'hdr10plus_tool'.")
         extract_hdr10plus_metadata(input_file, hdrplus_metadata)
     if dolby_vision:
-        print("Extracting Dolby Vision metadata")
+        print("Dolby Vision detected!!")
+        print("Extracting RPU with 'dovi_tool'. (converts to Dolby Vision Profile 8.1)")
         extract_dovi_rpu(input_file, dolby_vision_rpu, dv_separate_layer)
 
     dv_x265_opts = [
