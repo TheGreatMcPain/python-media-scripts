@@ -150,9 +150,8 @@ def extract_dovi_rpu(in_file: str, rpu_file: str, separate_track: bool):
     dovi_process.communicate()
 
 
-# Grab HDR metadata from input file using ffprobe.
-def get_hdr_info_ffprobe(in_file):
-    """ffprobe font-end."""
+# Grab video stats via ffprobe.
+def get_ffprobe_info(in_file):
     return dict(
         json.loads(
             sp.check_output(
@@ -164,18 +163,50 @@ def get_hdr_info_ffprobe(in_file):
                     "json",
                     "-show_format",
                     "-select_streams",
-                    "v:0",
+                    "v",
+                    "-show_streams",
                     "-show_frames",
                     "-read_intervals",
-                    "%+#1",
-                    "-show_entries",
-                    "frame=color_space,color_primaries,color_transfer,side_data_list,pix_fmt",
+                    "%+#20",
                     in_file,
                 ),
                 encoding="utf-8",
             )
         )
     )
+
+
+def get_first_frame_info(ffprobe_video_info, stream_index=0):
+    # This for loop shouldn't finish.
+    # If it does 'ffprobe' changed it's output format.
+    for frame in ffprobe_video_info["frames"]:
+        if frame["stream_index"] == stream_index:
+            return frame
+
+
+def get_master_display_data(ffprobe_video_info):
+    frame_info = get_first_frame_info(ffprobe_video_info)
+
+    if not frame_info:
+        return None
+
+    for side_data in frame_info["side_data_list"]:
+        if side_data["side_data_type"].lower() == "Mastering display metadata".lower():
+            return side_data
+
+
+def get_content_light_level_data(ffprobe_video_info):
+    frame_info = get_first_frame_info(ffprobe_video_info)
+
+    if not frame_info:
+        return None
+
+    for side_data in frame_info["side_data_list"]:
+        if (
+            side_data["side_data_type"].lower()
+            == "Content light level metadata".lower()
+        ):
+            return side_data
 
 
 def get_master_display_color_value(color_fraction: str, target_denominator: int):
@@ -185,21 +216,10 @@ def get_master_display_color_value(color_fraction: str, target_denominator: int)
     return (target_denominator // denominator) * numerator
 
 
-def get_x265_master_display_string(in_file: str):
-    hdr_info = get_hdr_info_ffprobe(in_file)
-
-    master_display = None
-    content_light_level = None
-
-    for side_data in hdr_info["frames"][0]["side_data_list"]:
-        if side_data["side_data_type"].lower() == "Mastering display metadata".lower():
-            master_display = side_data
-
-        if (
-            side_data["side_data_type"].lower()
-            == "Content light level metadata".lower()
-        ):
-            content_light_level = side_data
+# Translates the 'ffprobe' HDR10 info to 'x265' parameters.
+def get_x265_master_display_string(ffprobe_video_info):
+    master_display = get_master_display_data(ffprobe_video_info)
+    content_light_level = get_content_light_level_data(ffprobe_video_info)
 
     if not master_display:
         return None
@@ -252,7 +272,8 @@ def encode_video_x265(
     hdrplus: bool,
     bt709: bool,
 ):
-    master_display_info = get_x265_master_display_string(input_file)
+    video_info = get_ffprobe_info(input_file)
+    master_display_info = get_x265_master_display_string(video_info)
 
     if not master_display_info:
         return
