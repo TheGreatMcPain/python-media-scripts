@@ -35,7 +35,7 @@ MAXDB = "-0.5"
 # Nightmode Downmixing settings.
 SUR_CHANNEL_VOL = 0.707  # Volume level to set the non-center channels to.
 LFE_CHANNEL_VOL = 1.0  # Volume to set the LFE channel to.
-CENTER_CHANNEL_VOL = 1.0 # Volume to set the center channel to.
+CENTER_CHANNEL_VOL = 1.0  # Volume to set the center channel to.
 
 
 def main():
@@ -176,47 +176,48 @@ def mergeMKV(info):
         cmd += info["video"]["mkvmergeOpts"]
     cmd.append(videoInputFile)
 
-    for track in info["audio"]:
-        extension = track["extension"]
+    if "audio" in info:
+        for track in info["audio"]:
+            extension = track["extension"]
 
-        cmd += [
-            "--track-name",
-            "0:" + track["title"],
-            "--language",
-            "0:" + track["language"],
-            "--default-track",
-            "0:" + track["default"],
-            "audio-" + track["id"] + "." + extension,
-        ]
-
-        if "yes" in track["nightmode"]:
-            if "flac" in track["nightmodeCodec"]:
-                extension = "flac"
-            else:
-                extension = "m4a"
             cmd += [
                 "--track-name",
-                "0:" + track["nightmodeDownmixOnlyName"],
+                "0:" + track["title"],
                 "--language",
                 "0:" + track["language"],
                 "--default-track",
                 "0:" + track["default"],
-                "nightmode-" + track["id"] + "." + extension,
-                "--track-name",
-                "0:" + track["nightmodeLoudnormName"],
-                "--language",
-                "0:" + track["language"],
-                "--default-track",
-                "0:" + track["default"],
-                "nightmode-loudnorm-" + track["id"] + "." + extension,
-                "--track-name",
-                "0:" + track["nightmodeDrcName"],
-                "--language",
-                "0:" + track["language"],
-                "--default-track",
-                "0:" + track["default"],
-                "nightmode-drc-" + track["id"] + "." + extension,
+                "audio-" + track["id"] + "." + extension,
             ]
+
+            if "yes" in track["nightmode"]:
+                if "flac" in track["nightmodeCodec"]:
+                    extension = "flac"
+                else:
+                    extension = "m4a"
+                cmd += [
+                    "--track-name",
+                    "0:" + track["nightmodeDownmixOnlyName"],
+                    "--language",
+                    "0:" + track["language"],
+                    "--default-track",
+                    "0:" + track["default"],
+                    "nightmode-" + track["id"] + "." + extension,
+                    "--track-name",
+                    "0:" + track["nightmodeLoudnormName"],
+                    "--language",
+                    "0:" + track["language"],
+                    "--default-track",
+                    "0:" + track["default"],
+                    "nightmode-loudnorm-" + track["id"] + "." + extension,
+                    "--track-name",
+                    "0:" + track["nightmodeDrcName"],
+                    "--language",
+                    "0:" + track["language"],
+                    "--default-track",
+                    "0:" + track["default"],
+                    "nightmode-drc-" + track["id"] + "." + extension,
+                ]
 
     if "subs" in info:
         for track in info["subs"]:
@@ -552,6 +553,8 @@ def nightmodeTrack(inFile, outFile, codec, withLoudNorm, withDRC, maxdB):
 
 
 def createNightmodeTracks(info):
+    if "audio" not in info:
+        return
     audio = info["audio"]
     for track in audio:
         if "yes" in track["nightmode"]:
@@ -572,28 +575,33 @@ def createNightmodeTracks(info):
 
 def extractTracks(info):
     sourceFile = info["sourceFile"]
-    audio = info["audio"]
+    if "audio" in info:
+        audio = info["audio"]
+    else:
+        audio = 0
     if "subs" in info:
         subs = info["subs"]
     else:
         subs = 0
 
     cmd = ["ffmpeg", "-y", "-i", sourceFile]
-    for track in audio:
-        if "yes" in track["convert"]:
-            extension = track["extension"]
-            cmd += ["-map", "0:" + track["id"]]
-            cmd += track["ffmpegopts"]
-            cmd += ["audio-" + track["id"] + "." + extension]
+    if audio != 0:
+        for track in audio:
+            if "yes" in track["convert"]:
+                extension = track["extension"]
+                cmd += ["-map", "0:" + track["id"]]
+                cmd += track["ffmpegopts"]
+                cmd += ["audio-" + track["id"] + "." + extension]
 
-            print("Converting Audio via ffmpeg")
-            ffmpegAudio(cmd, sourceFile, track["id"])
+                print("Converting Audio via ffmpeg")
+                ffmpegAudio(cmd, sourceFile, track["id"])
 
     cmd = ["mkvextract", sourceFile, "tracks"]
-    for track in audio:
-        if "no" in track["convert"]:
-            extension = track["extension"]
-            cmd += [track["id"] + ":" + "audio-" + track["id"] + "." + extension]
+    if audio != 0:
+        for track in audio:
+            if "no" in track["convert"]:
+                extension = track["extension"]
+                cmd += [track["id"] + ":" + "audio-" + track["id"] + "." + extension]
 
     if subs != 0:
         for track in subs:
