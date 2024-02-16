@@ -78,6 +78,13 @@ Along with that it also asks the user for custom chapter names for each mkv file
 `dsd-to-flac` has a script that copies a directory containing DSF/DSD files,
 and converts the DSD files to FLAC via ffmpeg.
 
+## Misc Subtitle Scripts (subtitles folder)
+
+`compare-forced-subtitles` Created forced subtitles by comparing two BDNXML subtitles
+and marking subs as forced where they overlap. This was very useful for the
+Planet of the Apes reboot movies, where I wanted to burn in the sign language
+subtitles, but didn't want any overlaps from the regular subtitles.
+
 ## 2D to 3D Subtitle Convertion Scripts
 
 `3d-misc` has a bunch of WIP scripts that are ported code from
