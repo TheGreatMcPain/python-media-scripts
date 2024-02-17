@@ -200,9 +200,6 @@ def get_x265_master_display_string(ffprobe_video_info):
     if not master_display:
         return None
 
-    if not content_light_level:
-        return None
-
     master_display_string = "G({},{})".format(
         get_master_display_color_value(master_display["green_x"], 50000),
         get_master_display_color_value(master_display["green_y"], 50000),
@@ -224,13 +221,16 @@ def get_x265_master_display_string(ffprobe_video_info):
         get_master_display_color_value(master_display["min_luminance"], 10000),
     )
 
-    content_light_level_string = "{},{}".format(
-        content_light_level["max_content"], content_light_level["max_average"]
-    )
-
     results = {}
     results["master_display"] = master_display_string
-    results["content_light_level"] = content_light_level_string
+    results["content_light_level"] = None
+
+    if content_light_level:
+        content_light_level_string = "{},{}".format(
+            content_light_level["max_content"], content_light_level["max_average"]
+        )
+
+        results["content_light_level"] = content_light_level_string
 
     return results
 
@@ -335,9 +335,10 @@ def encode_video_x265(
         "--hdr10-opt",
         "--master-display",
         master_display_info["master_display"],
-        "--max-cll",
-        master_display_info["content_light_level"],
     ]
+
+    if master_display_info["content_light_level"]:
+        hdr_x265_opts += ["--max-cll", master_display_info["content_light_level"]]
 
     bt2020_x265_opts = [
         "--colorprim",
