@@ -5,6 +5,7 @@ import subprocess as sp
 import json
 import shutil
 import argparse
+from pathlib import Path
 import vapoursynth as vs
 
 core = vs.core
@@ -22,10 +23,10 @@ def main():
         description="Simple x265 script with Dolby Vision and HDR+"
     )
     parser.add_argument(
-        "--input", dest="input_file", type=str, help="Input video file (mkv)"
+        "-i", "--input", dest="input_file", type=str, help="Input video file (mkv)"
     )
     parser.add_argument(
-        "--output", dest="output_file", type=str, help="Output HEVC file (hevc)"
+        "-o", "--output", dest="output_file", type=str, help="Output HEVC file (hevc)"
     )
     parser.add_argument(
         "--bt709",
@@ -34,6 +35,13 @@ def main():
         help="Use bt709 instead of bt2020",
     )
     parser.set_defaults(bt709=False)
+    parser.add_argument(
+        "--skip-encode",
+        dest="skip_encode",
+        action=argparse.BooleanOptionalAction,
+        help="Create Dolby Vision profile 8 video without re-encode",
+    )
+    parser.set_defaults(skip_encode=False)
 
     args = parser.parse_args()
 
@@ -48,15 +56,13 @@ def main():
         args.input_file,
         args.output_file,
         args.bt709,
+        args.skip_encode,
     )
 
 
-# Returns the subprocess which ffmpeg sends
-# raw video track over stdout.
-# (will only show ffmpeg progress stats)
-def ffmpeg_video_stdout(
-    in_file: str, track: int, stats: bool, decode: bool
-) -> sp.Popen:
+# Returns the a ffmpeg cmd that sends raw video over stdout.
+# for use with sp.Popen
+def ffmpeg_video_cmd(in_file: str, track: int, stats: bool, decode: bool) -> list:
     ffmpeg_cmd = ["ffmpeg", "-loglevel", "fatal"]
     # ffmpeg_cmd = ["ffmpeg"]
 
@@ -85,7 +91,7 @@ def ffmpeg_video_stdout(
         "-",
     ]
 
-    return sp.Popen(ffmpeg_cmd, stdout=sp.PIPE)
+    return ffmpeg_cmd
 
 
 def extract_hdr10plus_metadata(in_file: str, metadata_json: str):
@@ -94,7 +100,7 @@ def extract_hdr10plus_metadata(in_file: str, metadata_json: str):
 
     hdr10plus_cmd = ["hdr10plus_tool", "extract", "--output", metadata_json, "-i", "-"]
 
-    ffmpeg_process = ffmpeg_video_stdout(in_file, 0, True, False)
+    ffmpeg_process = sp.Popen(ffmpeg_video_cmd(in_file, 0, True, False), stdout=sp.PIPE)
     hdr10plus_process = sp.Popen(hdr10plus_cmd, stdin=ffmpeg_process.stdout)
 
     hdr10plus_process.communicate()
@@ -120,7 +126,9 @@ def extract_dovi_rpu(in_file: str, rpu_file: str, separate_track: bool):
     if separate_track:
         video_track = 1
 
-    ffmpeg_process = ffmpeg_video_stdout(in_file, video_track, True, False)
+    ffmpeg_process = sp.Popen(
+        ffmpeg_video_cmd(in_file, video_track, True, False), stdout=sp.PIPE
+    )
     dovi_process = sp.Popen(dovi_cmd, stdin=ffmpeg_process.stdout)
 
     dovi_process.communicate()
@@ -279,6 +287,30 @@ def is_hdr10plus(ffprobe_video_info):
     return False
 
 
+def extract_video(input_file: str, output_file: str):
+    ffmpeg_cmd = ffmpeg_video_cmd(input_file, 0, True, False)
+
+    with open(output_file, "wb") as out:
+        ffmpeg_process = sp.Popen(ffmpeg_cmd, stdout=out)
+        ffmpeg_process.communicate()
+
+
+def inject_dv_metadata(input_file: str, RPU: str, output_file: str):
+    dovi_cmd = [
+        "dovi_tool",
+        "inject-rpu",
+        "--input",
+        input_file,
+        "--output",
+        output_file,
+        "--rpu-in",
+        RPU,
+    ]
+
+    dovi_process = sp.Popen(dovi_cmd)
+    dovi_process.communicate()
+
+
 def get_vs_filter(input_file: str):
     video = core.ffms2.Source(source=input_file)
     return video
@@ -288,6 +320,7 @@ def encode_video_x265(
     input_file: str,
     output_file: str,
     bt709: bool,
+    skip_encode: bool,
 ):
     video_info = get_ffprobe_info(input_file)
     master_display_info = get_x265_master_display_string(video_info)
@@ -310,6 +343,27 @@ def encode_video_x265(
         print("Dolby Vision detected!!")
         print("Extracting RPU with 'dovi_tool'. (converts to Dolby Vision Profile 8.1)")
         extract_dovi_rpu(input_file, dolby_vision_rpu, dv_separate_layer)
+
+    if skip_encode:
+        print("'--skip-encode' enabled!!")
+        print("Skipping x265 re-encode")
+        print()
+        print("Extracting raw video track")
+        temp_video = Path(output_file)
+
+        if dolby_vision:
+            temp_video = Path(input_file).with_suffix(".temp.hevc")
+
+        extract_video(input_file, temp_video.name)
+
+        if dolby_vision:
+            print("Injecting Dolby Vision Profile 8 metadata")
+            inject_dv_metadata(temp_video.name, dolby_vision_rpu, output_file)
+            print("Deleting", temp_video.name)
+            temp_video.unlink()
+
+        print("Done!!")
+        return
 
     dv_x265_opts = [
         "--dolby-vision-rpu",
