@@ -222,6 +222,10 @@ def mergeMKV(info):
     if "subs" in info:
         for track in info["subs"]:
             extension = track["extension"]
+            supFile = "subtitles-" + track["id"] + "." + extension
+
+            if "external" in track:
+                supFile = track["external"]
 
             cmd += [
                 "--track-name",
@@ -230,7 +234,7 @@ def mergeMKV(info):
                 "0:" + track["language"],
                 "--default-track",
                 "0:" + track["default"],
-                "subtitles-" + track["id"] + "." + extension,
+                supFile,
             ]
 
     if os.path.isfile("chapters.xml"):
@@ -272,11 +276,12 @@ def encodeVideo(info):
 
     if "subs" in info:
         for sub in info["subs"]:
-            supFile = "subtitles-forced-" + sub["id"] + ".sup"
-            if os.path.isfile(supFile):
-                print("Hardcoding Forced Subtitle id:", sub["id"])
-                video = core.sub.ImageFile(video, supFile)
-                break
+            if "external" not in sub:
+                supFile = "subtitles-forced-" + sub["id"] + ".sup"
+                if os.path.isfile(supFile):
+                    print("Hardcoding Forced Subtitle id:", sub["id"])
+                    video = core.sub.ImageFile(video, supFile)
+                    break
 
     cmd = videoInfo.getEncodeCmd()
 
@@ -306,6 +311,10 @@ def prepForcedSubs(info):
         return 0
 
     for track in subs:
+        if "external" in track:
+            print("Not checking external subtitles for forced subs.")
+            return 0
+
         if not os.path.isfile("subtitles-" + track["id"] + ".sup"):
             print("Subtitles doesn't exist!")
             return 0
@@ -605,8 +614,11 @@ def extractTracks(info):
 
     if subs != 0:
         for track in subs:
-            extension = track["extension"]
-            cmd += [track["id"] + ":" + "subtitles-" + track["id"] + "." + extension]
+            if "external" not in track:
+                extension = track["extension"]
+                cmd += [
+                    track["id"] + ":" + "subtitles-" + track["id"] + "." + extension
+                ]
 
     cmd += ["chapters", "chapters.xml"]
 
