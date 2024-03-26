@@ -325,9 +325,6 @@ def encode_video_x265(
     video_info = get_ffprobe_info(input_file)
     master_display_info = get_x265_master_display_string(video_info)
 
-    if not master_display_info:
-        return
-
     hdrplus_metadata = input_file + "_hdrplus.json"
     dolby_vision_rpu = input_file + "_dv.rpu"
 
@@ -387,12 +384,14 @@ def encode_video_x265(
 
     hdr_x265_opts = [
         "--hdr10-opt",
-        "--master-display",
-        master_display_info["master_display"],
     ]
 
-    if master_display_info["content_light_level"]:
-        hdr_x265_opts += ["--max-cll", master_display_info["content_light_level"]]
+    if master_display_info:
+        if master_display_info["master_display"]:
+            hdr_x265_opts += ["--master-display", master_display_info["master_display"]]
+
+        if master_display_info["content_light_level"]:
+            hdr_x265_opts += ["--max-cll", master_display_info["content_light_level"]]
 
     bt2020_x265_opts = [
         "--colorprim",
