@@ -1,7 +1,13 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 import sys
 import getopt
-from ..utils import nightmode
+import sys
+import os
+
+# Kinda gross, but it'll have to do.
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from utils import nightmode
 
 # Nightmode Downmixing settings.
 SUR_CHANNEL_VOL = 0.707  # Volume level to set the non-center channels to.
