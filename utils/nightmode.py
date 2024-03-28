@@ -164,14 +164,17 @@ def normAudio(inFile, outFile, maxdB):
         exit()
 
 
-def nightmodeTrack(inFile, outFile, codec, withLoudNorm, withDRC, maxdB=MAXDB):
+def nightmodeTrack(
+    inFile, outFile, codec, withLoudNorm, withDRC, samplerate=None, maxdB=MAXDB
+):
     normfile = "prenorm.flac"
     ffFilter = getffFilter(SUR_CHANNEL_VOL, LFE_CHANNEL_VOL, CENTER_CHANNEL_VOL)
     if withDRC:
         ffFilter += ",acompressor=ratio=4"
     if withLoudNorm:
         ffFilter += ",loudnorm"
-    samplerate = getSamplerate(inFile)
+    if not samplerate:
+        samplerate = getSamplerate(inFile)
     cmd = [
         "ffmpeg",
         "-i",
@@ -199,7 +202,7 @@ def nightmodeTrack(inFile, outFile, codec, withLoudNorm, withDRC, maxdB=MAXDB):
         flacToM4a(outFile)
 
 
-def createNightmodeTracks(codec, ext, inFile):
+def createNightmodeTracks(codec, ext, inFile, samplerate):
     print("Creating nightmode tracks for:", inFile)
     extension = ext
     inFile = inFile
@@ -207,8 +210,8 @@ def createNightmodeTracks(codec, ext, inFile):
     loudnormFile = inFile.split("." + extension)[0] + "-nightmode-loudnorm.flac"
     DRCFile = inFile.split("." + extension)[0] + "-nightmode-drc.flac"
     print("Creating 'DownmixOnly' track.")
-    nightmodeTrack(inFile, downmixFile, codec, False, False, MAXDB)
+    nightmodeTrack(inFile, downmixFile, codec, False, False, samplerate=samplerate)
     print("Creating 'Loudnorm' track.")
-    nightmodeTrack(inFile, loudnormFile, codec, True, False, MAXDB)
+    nightmodeTrack(inFile, loudnormFile, codec, True, False, samplerate=samplerate)
     print("Creating 'DRC+Loudnorm' track.")
-    nightmodeTrack(inFile, DRCFile, codec, True, True, MAXDB)
+    nightmodeTrack(inFile, DRCFile, codec, True, True, samplerate=samplerate)

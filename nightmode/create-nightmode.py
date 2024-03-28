@@ -19,10 +19,11 @@ MAXDB = "-0.5"
 def main():
     codec = None
     fileIn = None
+    samplerate = None
 
     try:
         options, args = getopt.getopt(
-            sys.argv[1:], "hc:i:", ["help", "codec=", "input="]
+            sys.argv[1:], "hr:c:i:", ["help", "samplerate=", "codec=", "input="]
         )
         for name, value in options:
             if name in ("-h", "--help"):
@@ -32,6 +33,8 @@ def main():
                 codec = value
             if name in ("-i", "--input"):
                 fileIn = value
+            if name in ("-r", "--samplerate"):
+                samplerate = value
     except getopt.GetoptError as err:
         print(str(err))
         Usage()
@@ -50,11 +53,15 @@ def main():
 
     ext = fileIn.split(".")[-1]
 
-    nightmode.createNightmodeTracks(codec, ext, fileIn)
+    nightmode.createNightmodeTracks(codec, ext, fileIn, samplerate=samplerate)
 
 
 def Usage():
-    print("Usage:", sys.argv[0], "-c,--codec <flac,aac,both> -i,--input <input file>")
+    print(
+        "Usage:",
+        sys.argv[0],
+        "-r,--samplerate <samplerate> -c,--codec <flac,aac,both> -i,--input <input file>",
+    )
 
 
 if __name__ == "__main__":
