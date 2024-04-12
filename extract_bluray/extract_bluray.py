@@ -5,11 +5,14 @@ import subprocess as sp
 import json
 
 OUTFILE = "source.mkv"
-JSONFILE = "bluray_data.json"
 
 
 def main():
     selection = "n"
+
+    # Data is stored in a json file with the same name of this script.
+    JSONFILE = os.path.basename(__file__).split(os.extsep)[0] + ".json"
+
     if os.path.isfile(JSONFILE):
         print(JSONFILE, "found.")
         selection = input("Resume with it? (y or n): ")
