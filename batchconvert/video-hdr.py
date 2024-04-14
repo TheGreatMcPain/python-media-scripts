@@ -2,11 +2,16 @@
 # This script will grab HDR metadata from UHD bluray
 # and re-encode it using x265. HDR+ and Dolby Vision included.
 import subprocess as sp
-import json
 import shutil
 import argparse
 from pathlib import Path
 import vapoursynth as vs
+import sys
+import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from utils import videoinfo
 
 core = vs.core
 
@@ -29,13 +34,6 @@ def main():
         "-o", "--output", dest="output_file", type=str, help="Output HEVC file (hevc)"
     )
     parser.add_argument(
-        "--bt709",
-        dest="bt709",
-        action=argparse.BooleanOptionalAction,
-        help="Use bt709 instead of bt2020",
-    )
-    parser.set_defaults(bt709=False)
-    parser.add_argument(
         "--skip-encode",
         dest="skip_encode",
         action=argparse.BooleanOptionalAction,
@@ -55,7 +53,6 @@ def main():
     encode_video_x265(
         args.input_file,
         args.output_file,
-        args.bt709,
         args.skip_encode,
     )
 
@@ -107,7 +104,7 @@ def extract_hdr10plus_metadata(in_file: str, metadata_json: str):
 
 
 # Check and extract Dolby Vision RPU from hevc file.
-def extract_dovi_rpu(in_file: str, rpu_file: str, separate_track: bool):
+def extract_dovi_rpu(in_file: str, rpu_file: str, dv_track: int):
     # Check if dovi_tool exists in path.
     if not shutil.which("dovi_tool"):
         return None
@@ -122,169 +119,12 @@ def extract_dovi_rpu(in_file: str, rpu_file: str, separate_track: bool):
         "-",
     ]
 
-    video_track = 0
-    if separate_track:
-        video_track = 1
-
     ffmpeg_process = sp.Popen(
-        ffmpeg_video_cmd(in_file, video_track, True, False), stdout=sp.PIPE
+        ffmpeg_video_cmd(in_file, dv_track, True, False), stdout=sp.PIPE
     )
     dovi_process = sp.Popen(dovi_cmd, stdin=ffmpeg_process.stdout)
 
     dovi_process.communicate()
-
-
-# Grab video stats via ffprobe.
-def get_ffprobe_info(in_file):
-    return dict(
-        json.loads(
-            sp.check_output(
-                (
-                    "ffprobe",
-                    "-v",
-                    "quiet",
-                    "-print_format",
-                    "json",
-                    "-show_format",
-                    "-select_streams",
-                    "v",
-                    "-show_streams",
-                    "-show_frames",
-                    "-read_intervals",
-                    "%+#20",
-                    in_file,
-                ),
-                encoding="utf-8",
-            )
-        )
-    )
-
-
-def get_first_frame_info(ffprobe_video_info, stream_index=0):
-    # This for loop shouldn't finish.
-    # If it does 'ffprobe' changed it's output format.
-    for frame in ffprobe_video_info["frames"]:
-        if frame["stream_index"] == stream_index:
-            return frame
-
-
-def get_master_display_data(ffprobe_video_info):
-    frame_info = get_first_frame_info(ffprobe_video_info)
-
-    if not frame_info:
-        return None
-
-    for side_data in frame_info["side_data_list"]:
-        if side_data["side_data_type"].lower() == "Mastering display metadata".lower():
-            return side_data
-
-
-def get_content_light_level_data(ffprobe_video_info):
-    frame_info = get_first_frame_info(ffprobe_video_info)
-
-    if not frame_info:
-        return None
-
-    for side_data in frame_info["side_data_list"]:
-        if (
-            side_data["side_data_type"].lower()
-            == "Content light level metadata".lower()
-        ):
-            return side_data
-
-
-def get_master_display_color_value(color_fraction: str, target_denominator: int):
-    numerator = int(color_fraction.split("/")[0])
-    denominator = int(color_fraction.split("/")[1])
-
-    return (target_denominator // denominator) * numerator
-
-
-# Translates the 'ffprobe' HDR10 info to 'x265' parameters.
-def get_x265_master_display_string(ffprobe_video_info):
-    master_display = get_master_display_data(ffprobe_video_info)
-    content_light_level = get_content_light_level_data(ffprobe_video_info)
-
-    if not master_display:
-        return None
-
-    master_display_string = "G({},{})".format(
-        get_master_display_color_value(master_display["green_x"], 50000),
-        get_master_display_color_value(master_display["green_y"], 50000),
-    )
-    master_display_string += "B({},{})".format(
-        get_master_display_color_value(master_display["blue_x"], 50000),
-        get_master_display_color_value(master_display["blue_y"], 50000),
-    )
-    master_display_string += "R({},{})".format(
-        get_master_display_color_value(master_display["red_x"], 50000),
-        get_master_display_color_value(master_display["red_y"], 50000),
-    )
-    master_display_string += "WP({},{})".format(
-        get_master_display_color_value(master_display["white_point_x"], 50000),
-        get_master_display_color_value(master_display["white_point_y"], 50000),
-    )
-    master_display_string += "L({},{})".format(
-        get_master_display_color_value(master_display["max_luminance"], 10000),
-        get_master_display_color_value(master_display["min_luminance"], 10000),
-    )
-
-    results = {}
-    results["master_display"] = master_display_string
-    results["content_light_level"] = None
-
-    if content_light_level:
-        content_light_level_string = "{},{}".format(
-            content_light_level["max_content"], content_light_level["max_average"]
-        )
-
-        results["content_light_level"] = content_light_level_string
-
-    return results
-
-
-def is_dv_separate_layer(ffprobe_video_info):
-    # See if there is a second video track. (This is usually the Dolby Vision Layer)
-    frame_info = get_first_frame_info(ffprobe_video_info, stream_index=1)
-
-    if not frame_info:
-        return False
-
-    for side_data in frame_info["side_data_list"]:
-        if side_data["side_data_type"].lower() == "Dolby Vision Metadata".lower():
-            return True
-    return False
-
-
-def is_dolby_vision(ffprobe_video_info):
-    # Check for separate dolby vision enhancement layer.
-    if is_dv_separate_layer(ffprobe_video_info):
-        return True
-
-    frame_info = get_first_frame_info(ffprobe_video_info, stream_index=0)
-
-    if not frame_info:
-        return False
-
-    for side_data in frame_info["side_data_list"]:
-        if side_data["side_data_type"].lower() == "Dolby Vision Metadata".lower():
-            return True
-    return False
-
-
-def is_hdr10plus(ffprobe_video_info):
-    frame_info = get_first_frame_info(ffprobe_video_info, stream_index=0)
-
-    if not frame_info:
-        return False
-
-    for side_data in frame_info["side_data_list"]:
-        if (
-            side_data["side_data_type"].lower()
-            == "HDR Dynamic Metadata SMPTE2094-40 (HDR10+)".lower()
-        ):
-            return True
-    return False
 
 
 def extract_video(input_file: str, output_file: str):
@@ -319,27 +159,21 @@ def get_vs_filter(input_file: str):
 def encode_video_x265(
     input_file: str,
     output_file: str,
-    bt709: bool,
     skip_encode: bool,
 ):
-    video_info = get_ffprobe_info(input_file)
-    master_display_info = get_x265_master_display_string(video_info)
+    inputInfo = videoinfo.videoInfo(input_file)
 
     hdrplus_metadata = input_file + "_hdrplus.json"
     dolby_vision_rpu = input_file + "_dv.rpu"
 
-    hdrplus = is_hdr10plus(video_info)
-    dolby_vision = is_dolby_vision(video_info)
-    dv_separate_layer = is_dv_separate_layer(video_info)
-
-    if hdrplus:
+    if inputInfo.HDR10Plus:
         print("HDR10+ detected!!")
         print("Extracting it with 'hdr10plus_tool'.")
         extract_hdr10plus_metadata(input_file, hdrplus_metadata)
-    if dolby_vision:
+    if inputInfo.DolbyVision:
         print("Dolby Vision detected!!")
         print("Extracting RPU with 'dovi_tool'. (converts to Dolby Vision Profile 8.1)")
-        extract_dovi_rpu(input_file, dolby_vision_rpu, dv_separate_layer)
+        extract_dovi_rpu(input_file, dolby_vision_rpu, inputInfo.DVTrack)
 
     if skip_encode:
         print("'--skip-encode' enabled!!")
@@ -348,12 +182,12 @@ def encode_video_x265(
         print("Extracting raw video track")
         temp_video = Path(output_file)
 
-        if dolby_vision:
+        if inputInfo.DolbyVision:
             temp_video = Path(input_file).with_suffix(".temp.hevc")
 
         extract_video(input_file, temp_video.name)
 
-        if dolby_vision:
+        if inputInfo.DolbyVision:
             print("Injecting Dolby Vision Profile 8 metadata")
             inject_dv_metadata(temp_video.name, dolby_vision_rpu, output_file)
             print("Deleting", temp_video.name)
@@ -386,33 +220,22 @@ def encode_video_x265(
         "--hdr10-opt",
     ]
 
-    if master_display_info:
-        if master_display_info["master_display"]:
-            hdr_x265_opts += ["--master-display", master_display_info["master_display"]]
+    if inputInfo.HDR10MasterDisplayData:
+        if inputInfo.HDR10MasterDisplayData:
+            hdr_x265_opts += ["--master-display", inputInfo.X265HDR10MasterDisplayString]
 
-        if master_display_info["content_light_level"]:
-            hdr_x265_opts += ["--max-cll", master_display_info["content_light_level"]]
+        if inputInfo.HDR10ContentLightLeveData:
+            hdr_x265_opts += ["--max-cll", inputInfo.X265HDR10CLLString]
 
-    bt2020_x265_opts = [
+    color_x265_opts = [
         "--colorprim",
-        "bt2020",
+        inputInfo.ColorPrimaries,
         "--transfer",
-        "smpte2084",
+        inputInfo.ColorTransfer,
         "--colormatrix",
-        "bt2020nc",
+        inputInfo.ColorMatrix,
         "--range",
-        "limited",
-    ]
-
-    bt709_x265_opts = [
-        "--colorprim",
-        "bt709",
-        "--transfer",
-        "bt709",
-        "--colormatrix",
-        "bt709",
-        "--range",
-        "limited",
+        inputInfo.ColorRange,
     ]
 
     cmd = [
@@ -432,18 +255,14 @@ def encode_video_x265(
         "0.75",
     ]
 
-    cmd += tenbit_x265_opts + hdr_x265_opts
+    cmd += tenbit_x265_opts + hdr_x265_opts + color_x265_opts
 
-    if bt709:
-        cmd += bt709_x265_opts
-    else:
-        cmd += bt2020_x265_opts
-    if hdrplus:
+    if inputInfo.HDR10Plus:
         cmd += hdrplus_x265_opts
-    if dolby_vision:
+    if inputInfo.DolbyVision:
         cmd += dv_x265_opts
 
-    video = get_vs_filter(input_file)
+    video = get_vs_filter(inputInfo.inFile)
     cmd += ["--frames", str(video.num_frames)]
 
     print("==START x265 CMD==")
