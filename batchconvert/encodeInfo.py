@@ -87,8 +87,6 @@ class encodeInfo:
         return VIDEO_ENCODE_NAME
 
 
-# A single under-score basically marks this function as private 'module-level'
-# meaning this function won't be imported via "from <module> import *"
 class encodeVideo:
     def __init__(self, info: encodeInfo):
         self.video = info.vapoursynthFilter()
