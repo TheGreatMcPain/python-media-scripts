@@ -5,21 +5,22 @@ import pathlib
 import sys
 import shutil
 import subprocess as sp
-import time
 import threading
+import vapoursynth as vs
+import importlib.util
 import xml.etree.cElementTree as ET
-from ..utils import nightmode
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from utils import videoinfo
+from utils import nightmode
 
 import psutil  # Comment out of not using psutil
-
-import encodeInfo
 
 # Set process niceness (Priority)
 psutil.Process(os.getpid()).nice(15)  # Comment out if not using psutil
 
 # Globals
 INFOFILE = "info.json"
-ENCODEINFO = "encodeInfo.py"
 RESUME = "resume-file"
 
 # BDSup2Sub Settings #
@@ -48,19 +49,6 @@ def main():
 
         if len(sys.argv) == 1:
             for folder in folders:
-                # Check if a 'encodeInfo.py' file exists.
-                encodeInfoFile = os.path.join(folder, ENCODEINFO)
-                # If it exists override the previous 'encodeInfo'
-                if os.path.isfile(encodeInfoFile):
-                    global encodeInfo
-                    # Delete the old 'encodeInfo' import
-                    del sys.modules["encodeInfo"]
-                    # insert the path to 'encodeInfoFile' in system PATH
-                    sys.path.insert(0, os.path.dirname(os.path.abspath(encodeInfoFile)))
-                    # Import the new 'encodeInfo' into our global imports
-                    globals()["encodeInfo"] = __import__("encodeInfo")
-                    # Cleanup the system PATH
-                    sys.path.remove(os.path.dirname(os.path.abspath(encodeInfoFile)))
                 os.chdir(folder)
                 index = folders.index(folder)
                 total = len(folders)
@@ -68,21 +56,19 @@ def main():
                 convertMKV(INFOFILE)
                 os.chdir("..")
 
-                # Reimport the "global" 'encodeInfo'
-                del sys.modules["encodeInfo"]
-                globals()["encodeInfo"] = __import__("encodeInfo")
-
     print("Cleaning python cache files.")
     cleanPythonCache(".")
 
     if len(sys.argv) == 2:
         if "--clean" == sys.argv[1]:
-            exclude = [os.path.basename(__file__), INFOFILE, ENCODEINFO]
+            exclude = [os.path.basename(__file__), INFOFILE]
             print("\nCleaning temp files")
             for folder in folders:
                 infoPath = os.path.join(folder, INFOFILE)
                 info = getInfo(infoPath)
                 exclude.append(info["sourceFile"])
+                if "vapoursynthScript" in info["video"]:
+                    exclude.append(info["video"]["vapoursynthScript"])
                 deleteList = list(set(os.listdir(folder)) - set(exclude))
                 for file in deleteList:
                     filePath = os.path.join(folder, file)
@@ -148,9 +134,6 @@ def readResume():
 def mergeMKV(info):
     title = info["title"]
     output = info["outputFile"]
-    sourceFile = info["sourceFile"]
-    videoInfo = encodeInfo.encodeInfo(sourceFile)
-    videoInputFile = videoInfo.getEncodeFile()
 
     cmd = [
         "mkvmerge",
@@ -166,7 +149,7 @@ def mergeMKV(info):
 
     if "mkvmergeOpts" in info["video"]:
         cmd += info["video"]["mkvmergeOpts"]
-    cmd.append(videoInputFile)
+    cmd.append(info["video"]["output"])
 
     if "audio" in info:
         for track in info["audio"]:
@@ -239,13 +222,11 @@ def mergeMKV(info):
 
 
 def encodeVideo(info):
-    sourceFile = info["sourceFile"]
-    # VapourSynth stuff
-    videoInfo = encodeInfo.encodeInfo(sourceFile)
+    inputInfo = videoinfo.videoInfo(info["sourceFile"])
 
     if not info["video"]["convert"]:
         # Assume video in on track 0.
-        mkvOutTrack = "0:" + videoInfo.getEncodeFile()
+        mkvOutTrack = "0:" + info["video"]["output"]
         cmd = ["mkvextract", info["sourceFile"], "tracks", mkvOutTrack]
 
         # Print extract command
@@ -255,6 +236,44 @@ def encodeVideo(info):
         extractProc.communicate()
         return 0
 
+    video = None
+    # If a vapoursynth script is specified load it in as a module.
+    if (
+        "vapoursynthScript" in info["video"]
+        and info["video"]["vapoursynthScript"] != ""
+    ):
+        if not os.path.isfile(info["video"]["vapoursynthScript"]):
+            print("'{}' doesn't exist!".format(info["video"]["vapoursynthScript"]))
+            exit(1)
+        vapoursynthScript_spec = importlib.util.spec_from_file_location(
+            "vapoursynthScript", info["video"]["vapoursynthScript"]
+        )
+        # These checks for None suck!
+        if not vapoursynthScript_spec:
+            print("Loading '{}' failed".format(info["video"]["vapoursynthScript"]))
+            exit(1)
+        vapoursynthScript = importlib.util.module_from_spec(vapoursynthScript_spec)
+        # Like why?
+        if not vapoursynthScript_spec.loader:
+            print(
+                "Failed to load '{}' as a module".format(
+                    info["video"]["vapoursynthScript"]
+                )
+            )
+            exit(1)
+        vapoursynthScript_spec.loader.exec_module(vapoursynthScript)
+        if "vapoursynthFilter" in dir(vapoursynthScript):
+            video = vapoursynthScript.vapoursynthFilter(info["sourceFile"])
+        else:
+            print(
+                "'vapoursynthFilter()' Doesn't exist in {}".format(
+                    info["video"]["vapoursynthScript"]
+                )
+            )
+            exit(1)
+    else:
+        video = vs.core.ffms2.Source(info["sourceFile"])
+
     encodeProcess = None
 
     # Encode thread Function
@@ -263,19 +282,37 @@ def encodeVideo(info):
         encodeProcess = sp.Popen(cmd, stdin=sp.PIPE)
         video.output(encodeProcess.stdin, y4m=True)
 
-    core = videoInfo.getVSCore()
-    video = videoInfo.vapoursynthFilter()
-
     if "subs" in info:
         for sub in info["subs"]:
             if "external" not in sub:
                 supFile = "subtitles-forced-" + sub["id"] + ".sup"
                 if os.path.isfile(supFile):
                     print("Hardcoding Forced Subtitle id:", sub["id"])
-                    video = core.sub.ImageFile(video, supFile)
+                    video = vs.core.sub.ImageFile(video, supFile)
                     break
 
-    cmd = videoInfo.getEncodeCmd()
+    cmd = [
+        "x265",
+        "--y4m",
+        "--range",
+        inputInfo.ColorRange,
+        "--colorprim",
+        inputInfo.ColorPrimaries,
+        "--transfer",
+        inputInfo.ColorTransfer,
+        "--colormatrix",
+        inputInfo.ColorMatrix,
+        "--frames",
+        str(video.framecount),
+        "--input",
+        "-",
+        "--output",
+        info["video"]["output"],
+    ]
+    if "x265Opts" not in info["video"]:
+        print("'x265Opts' not found in {}'s 'video' section!".format(INFOFILE))
+        exit(1)
+    cmd += info["video"]["x265Opts"]
 
     print(" ".join(cmd))
 

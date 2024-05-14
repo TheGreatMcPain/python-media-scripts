@@ -3,9 +3,21 @@
   "title": "Avengers - End Game",
   "outputFile": "Avengers - End Game.mkv",
   "video": {
-    "convert": true,
     "title": "1080p (H264)",
     "language": "eng",
+    "output": "video.h264",
+    "convert": true,
+    "x265Opts": [
+      "--preset",
+      "16",
+      "--qcomp",
+      "0.75",
+      "--tune",
+      "grain",
+      "--output-depth",
+      "10"
+    ],
+    "vapoursynthScript": "vapoursynth-filter.py",
     "mkvmergeOpts": ["--aspect-ratio", "0:16/9"]
   },
   "audio": [
