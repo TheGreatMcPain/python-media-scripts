@@ -16,19 +16,12 @@ This will be imported by 'batchencode.py'.
 By making it a seperate file customization can be done easily
 without cluttering up the main script.
 
-vapoursynthFilter(): Pre-encode video filters via VapourSynth.
-
-getVSCore(): Returns the VapourSynth 'core' class.
-(So that I don't need to import vapoursynth in the main script.)
-
-getEncodeCmd(): Returns the command used to encode the video.
-
-getEncodeFile(): Returns the output name of the output file.
+"batchencode will call 'vapoursynthFilter' just to be clear."
 """
 
-VIDEO_ENCODE_NAME = "video.mkv"
-# Change this to set VapourSynth's buffer size. (in MB)
-VSCORE_MEM_CACHE_MAX = None
+VIDEO_ENCODE_NAME = "video.h265"
+# Change this to get VapourSynth's buffer size. (in MB)
+VSCORE_MEM_CACHE_MAX = 1024
 
 
 class encodeInfo:
@@ -50,23 +43,20 @@ class encodeInfo:
 
     def getEncodeCmd(self):
         video = self.vapoursynthFilter()
-        framecount = str(video.num_frames)
+        framecount = video.num_frames
         cmd = [
-            "x264",
-            "--demuxer",
-            "y4m",
+            "x265",
+            "--y4m",
             "--preset",
-            "veryslow",
-            "--tune",
-            "film",
-            "--level",
-            "4.1",
+            "medium",
             "--crf",
-            "16",
+            "18",
             "--qcomp",
-            "0.7",
-            "--input-range",
-            self.inputInfo.ColorRange,
+            "0.75",
+            "--tune",
+            "grain",
+            "--output-depth",
+            "10",
             "--range",
             self.inputInfo.ColorRange,
             "--colorprim",
@@ -76,10 +66,11 @@ class encodeInfo:
             "--colormatrix",
             self.inputInfo.ColorMatrix,
             "--frames",
-            framecount,
+            str(framecount),
+            "--input",
+            "-",
             "--output",
             VIDEO_ENCODE_NAME,
-            "-",
         ]
         return cmd
 
