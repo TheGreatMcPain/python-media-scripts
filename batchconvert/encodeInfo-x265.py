@@ -6,6 +6,9 @@ import psutil
 import threading
 import subprocess as sp
 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from utils import videoinfo
+
 core = vs.core
 """
 This will be imported by 'batchencode.py'.
@@ -23,12 +26,12 @@ VSCORE_MEM_CACHE_MAX = 1024
 
 class encodeInfo:
     def __init__(self, sourcefile):
-        self.sourcefile = sourcefile
+        self.inputInfo = videoinfo.videoInfo(sourcefile)
 
     def vapoursynthFilter(self):
         if VSCORE_MEM_CACHE_MAX is not None:
             core.max_cache_size = VSCORE_MEM_CACHE_MAX
-        video = core.ffms2.Source(source=self.sourcefile)
+        video = core.ffms2.Source(source=self.inputInfo.inFile)
         # video = core.std.CropRel(video, top=140, bottom=140)
         # video = haf.GSMC(video, thSAD=150, radius=2)
         # video = core.f3kdb.Deband(video, dynamic_grain=True, preset="Low")
@@ -55,13 +58,13 @@ class encodeInfo:
             "--output-depth",
             "10",
             "--range",
-            "limited",
+            self.inputInfo.ColorRange,
             "--colorprim",
-            "bt709",
+            self.inputInfo.ColorPrimaries,
             "--transfer",
-            "bt709",
+            self.inputInfo.ColorTransfer,
             "--colormatrix",
-            "bt709",
+            self.inputInfo.ColorMatrix,
             "--frames",
             str(framecount),
             "--input",
@@ -75,8 +78,6 @@ class encodeInfo:
         return VIDEO_ENCODE_NAME
 
 
-# A single under-score basically marks this function as private 'module-level'
-# meaning this function won't be imported via "from <module> import *"
 class encodeVideo:
     def __init__(self, info: encodeInfo):
         self.video = info.vapoursynthFilter()
