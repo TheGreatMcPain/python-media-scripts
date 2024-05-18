@@ -8,6 +8,7 @@
 import json
 import subprocess as sp
 import sys
+import shutil
 
 
 class videoInfo:
@@ -23,6 +24,9 @@ class videoInfo:
     DVTrack = 0
     HDR10Plus = False
 
+    DVMetadataFile = None
+    HDR10PlusMetadataFile = None
+
     # Values that need to be passed to x265
     # (y4m doesn't carry this information I guess)
     ColorMatrix = None
@@ -30,10 +34,15 @@ class videoInfo:
     ColorPrimaries = None
     ColorRange = None
 
+    DoviTool = "dovi_tool"
+    HDR10PlusTool = "hdr10plus_tool"
+
     ffprobeInfo = dict()
 
     def __init__(self, in_file: str):
         self.inFile = in_file
+        self.DVMetadataFile = in_file + "_dv.rpu"
+        self.HDR10PlusMetadataFile = in_file + "_hdrplus.json"
         self.ffprobeInfo = dict(
             json.loads(
                 sp.check_output(
@@ -95,6 +104,74 @@ class videoInfo:
                 self.X265HDR10CLLString = self.__getX265CLLString()
                 if self.HDR10MasterDisplayData:
                     self.HDR10 = True
+
+    def extractHDR10PlusMetadata(self):
+        if not shutil.which(self.HDR10PlusTool):
+            return 1
+
+        HDR10PlusCmd = [
+            "hdr10plus_tool",
+            "extract",
+            "--output",
+            self.HDR10PlusMetadataFile,
+            "-",
+        ]
+
+        ffmpegProcess = sp.Popen(
+            (
+                "ffmpeg",
+                "-loglevel",
+                "fatal",
+                "-stats",
+                "-i",
+                self.inFile,
+                "-map",
+                "0:0",
+                "-c:v",
+                "copy",
+                "-f",
+                "hevc",
+                "-",
+            ),
+            stdout=sp.PIPE,
+        )
+        HDR10PlusProcess = sp.Popen(HDR10PlusCmd, stdin=ffmpegProcess.stdout)
+        HDR10PlusProcess.communicate()
+
+    def extractDoviRPU(self):
+        if not shutil.which(self.DoviTool):
+            return 1
+
+        doviCmd = [
+            "dovi_tool",
+            "--mode",
+            "2",
+            "extract-rpu",
+            "--rpu-out",
+            self.DVMetadataFile,
+            "-",
+        ]
+
+        ffmpegProcess = sp.Popen(
+            (
+                "ffmpeg",
+                "-loglevel",
+                "fatal",
+                "-stats",
+                "-i",
+                self.inFile,
+                "-map",
+                "0:" + str(self.DVTrack),
+                "-c:v",
+                "copy",
+                "-f",
+                "hevc",
+                "-",
+            ),
+            stdout=sp.PIPE,
+        )
+        doviProcess = sp.Popen(doviCmd, stdin=ffmpegProcess.stdout)
+        doviProcess.communicate()
 
     def __getContentLightLeveData(self, sideDataList):
         for sideData in sideDataList:

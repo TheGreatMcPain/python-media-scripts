@@ -291,9 +291,30 @@ def encodeVideo(info):
                     video = vs.core.sub.ImageFile(video, supFile)
                     break
 
+    if inputInfo.HDR10Plus:
+        print("HDR10+ Detected!!")
+        print("Extracting it with '{}'.".format(inputInfo.HDR10PlusTool))
+        if inputInfo.extractHDR10PlusMetadata() != 0:
+            print("'{}' not in PATH".format(inputInfo.HDR10PlusTool))
+            exit(1)
+    if inputInfo.DolbyVision:
+        print("Dolby Vision detected!!")
+        print(
+            "Extract RPU with '{}'. (converts to Dolby Vision Profile 8.1)".format(
+                inputInfo.DoviTool
+            )
+        )
+        if inputInfo.extractDoviRPU() != 0:
+            print("'{}' not in PATH".format(inputInfo.DoviTool))
+            exit(1)
+
     cmd = [
         "x265",
         "--y4m",
+        "--input",
+        "-",
+        "--output",
+        info["video"]["output"],
         "--range",
         inputInfo.ColorRange,
         "--colorprim",
@@ -304,11 +325,30 @@ def encodeVideo(info):
         inputInfo.ColorMatrix,
         "--frames",
         str(video.framecount),
-        "--input",
-        "-",
-        "--output",
-        info["video"]["output"],
     ]
+
+    cmd += ["--hdr10-opt"]
+
+    if inputInfo.HDR10MasterDisplayData:
+        cmd += ["--master-display", inputInfo.X265HDR10MasterDisplayString]
+    if inputInfo.HDR10ContentLightLeveData:
+        cmd += ["--max-cll", inputInfo.X265HDR10CLLString]
+
+    if inputInfo.DolbyVision:
+        cmd += [
+            "--dolby-vision-rpu",
+            inputInfo.DVMetadataFile,
+            "--dolby-vision-profile",
+            "8.1",
+            "--vbv-bufsize",
+            "50000",
+            "--vbv-maxrate",
+            "50000",
+        ]
+
+    if inputInfo.HDR10Plus:
+        cmd += ["--dhdr10-info=" + str(inputInfo.HDR10PlusMetadataFile)]
+
     if "x265Opts" not in info["video"]:
         print("'x265Opts' not found in {}'s 'video' section!".format(INFOFILE))
         exit(1)
