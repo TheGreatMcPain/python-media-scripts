@@ -271,6 +271,11 @@ def encodeVideo(info):
                 )
             )
             exit(1)
+        print(
+            "Using 'vapoursynthFilter()' from '{}'".format(
+                info["video"]["vapoursynthScript"]
+            )
+        )
     else:
         video = vs.core.ffms2.Source(info["sourceFile"])
 
