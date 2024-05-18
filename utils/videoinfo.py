@@ -67,14 +67,14 @@ class videoInfo:
         # Go through each video stream and check for HDR metadata.
         for stream in self.ffprobeInfo["streams"]:
             if stream["codec_type"] == "video":
-                if not self.ColorMatrix:
+                if not self.ColorMatrix and "color_space" in stream:
                     self.ColorMatrix = stream["color_space"]
-                if not self.ColorTransfer:
+                if not self.ColorTransfer and "color_transfer" in stream:
                     self.ColorTransfer = stream["color_transfer"]
-                if not self.ColorPrimaries:
+                if not self.ColorPrimaries and "color_primaries" in stream:
                     self.ColorPrimaries = stream["color_primaries"]
 
-                if not self.ColorRange:
+                if not self.ColorRange and "color_range" in stream:
                     if stream["color_range"] == "tv":
                         self.ColorRange = "limited"
                     else:

@@ -320,17 +320,18 @@ def encodeVideo(info):
         "-",
         "--output",
         info["video"]["output"],
-        "--range",
-        inputInfo.ColorRange,
-        "--colorprim",
-        inputInfo.ColorPrimaries,
-        "--transfer",
-        inputInfo.ColorTransfer,
-        "--colormatrix",
-        inputInfo.ColorMatrix,
         "--frames",
         str(video.framecount),
     ]
+
+    if inputInfo.ColorRange:
+        cmd += ["--range", inputInfo.ColorRange]
+    if inputInfo.ColorPrimaries:
+        cmd += ["--colorprim", inputInfo.ColorPrimaries]
+    if inputInfo.ColorTransfer:
+        cmd += ["--transfer", inputInfo.ColorTransfer]
+    if inputInfo.ColorMatrix:
+        cmd += ["--colormatrix", inputInfo.ColorMatrix]
 
     cmd += ["--hdr10-opt"]
 
