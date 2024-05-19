@@ -1,3 +1,5 @@
+## TODO: Update this whole README.md
+
 # Batch Encode Usage
 
 Each `source.mkv` will sit in its own folder, and along
