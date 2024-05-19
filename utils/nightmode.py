@@ -2,6 +2,7 @@ import json
 import subprocess as sp
 import time
 import os
+import shutil
 
 # Nightmode Downmixing settings.
 SUR_CHANNEL_VOL = 0.707  # Volume level to set the non-center channels to.
@@ -164,15 +165,40 @@ def normAudio(inFile, outFile, maxdB):
         exit()
 
 
+def downmixTrack(inFile, outFile):
+    ffFilter = getffFilter(SUR_CHANNEL_VOL, LFE_CHANNEL_VOL, CENTER_CHANNEL_VOL)
+    cmd = [
+        "ffmpeg",
+        "-i",
+        inFile,
+        "-acodec",
+        "flac",
+        "-compression_level",
+        "8",
+        "-af",
+        ffFilter,
+        "-y",
+        outFile,
+    ]
+    ffmpegAudio(cmd, inFile, None)
+
+
 def nightmodeTrack(
     inFile, outFile, codec, withLoudNorm, withDRC, samplerate=None, maxdB=MAXDB
 ):
+    if not withLoudNorm and not withDRC:
+        normalized = normAudio(inFile, outFile, maxdB)
+        if not normalized:
+            shutil.copy2(inFile, outFile)
+        return
+
     normfile = "prenorm.flac"
-    ffFilter = getffFilter(SUR_CHANNEL_VOL, LFE_CHANNEL_VOL, CENTER_CHANNEL_VOL)
+    ffFilterList = []
     if withDRC:
-        ffFilter += ",acompressor=ratio=4"
+        ffFilterList.append("acompressor=ratio=4")
     if withLoudNorm:
-        ffFilter += ",loudnorm"
+        ffFilterList.append("loudnorm")
+    ffFilter = ",".join(ffFilterList)
     if not samplerate:
         samplerate = getSamplerate(inFile)
     cmd = [
@@ -206,12 +232,23 @@ def createNightmodeTracks(codec, ext, inFile, samplerate):
     print("Creating nightmode tracks for:", inFile)
     extension = ext
     inFile = inFile
+    initialDownmixFile = "downmix.flac"
     downmixFile = inFile.split("." + extension)[0] + "-nightmode.flac"
     loudnormFile = inFile.split("." + extension)[0] + "-nightmode-loudnorm.flac"
     DRCFile = inFile.split("." + extension)[0] + "-nightmode-drc.flac"
+    print("Downmixing audio to stereo.")
+    downmixTrack(inFile, initialDownmixFile)
     print("Creating 'DownmixOnly' track.")
-    nightmodeTrack(inFile, downmixFile, codec, False, False, samplerate=samplerate)
+    nightmodeTrack(
+        initialDownmixFile, downmixFile, codec, False, False, samplerate=samplerate
+    )
     print("Creating 'Loudnorm' track.")
-    nightmodeTrack(inFile, loudnormFile, codec, True, False, samplerate=samplerate)
+    nightmodeTrack(
+        initialDownmixFile, loudnormFile, codec, True, False, samplerate=samplerate
+    )
     print("Creating 'DRC+Loudnorm' track.")
-    nightmodeTrack(inFile, DRCFile, codec, True, True, samplerate=samplerate)
+    nightmodeTrack(
+        initialDownmixFile, DRCFile, codec, True, True, samplerate=samplerate
+    )
+    print("Removing {}.".format(initialDownmixFile))
+    os.remove(initialDownmixFile)
