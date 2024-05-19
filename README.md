@@ -57,18 +57,6 @@ any forced subtitles via `BDSup2Sub`, remove the forced subtitles from the origi
 subtitles file, re-encode the video, while embedding forced subtitles,
 and finally mux a new mkv via `mkvmerge`.
 
-## Generate Combined MKV
-
-The `generate-combined-mkv` folder has a script that combines a set of mkvs into
-one big mkv.
-
-It was made for extras from BluRays that decide to put deleted scenes into seperate
-files.
-
-It simply appends a set of mkv files into one mkv via mkvmerge.
-
-Along with that it also asks the user for custom chapter names for each mkv file.
-
 ## ffmpeg Slideshow.
 
 `slideshow` has a script that creates a 720p picture slideshow using ffmpeg.
