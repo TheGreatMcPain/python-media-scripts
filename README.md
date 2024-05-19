@@ -57,10 +57,6 @@ any forced subtitles via `BDSup2Sub`, remove the forced subtitles from the origi
 subtitles file, re-encode the video, while embedding forced subtitles,
 and finally mux a new mkv via `mkvmerge`.
 
-## ffmpeg Slideshow.
-
-`slideshow` has a script that creates a 720p picture slideshow using ffmpeg.
-
 ## Misc Subtitle Scripts (subtitles folder)
 
 `compare-forced-subtitles` Created forced subtitles by comparing two BDNXML subtitles
