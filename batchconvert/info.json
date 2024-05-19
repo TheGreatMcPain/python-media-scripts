@@ -3,12 +3,14 @@
   "title": "Avengers - End Game",
   "outputFile": "Avengers - End Game.mkv",
   "video": {
-    "title": "1080p (H264)",
+    "title": "1080p (HEVC)",
     "language": "eng",
-    "output": "video.h264",
+    "output": "video.hevc",
     "convert": true,
     "x265Opts": [
       "--preset",
+      "medium",
+      "--crf",
       "16",
       "--qcomp",
       "0.75",

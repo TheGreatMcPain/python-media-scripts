@@ -321,7 +321,7 @@ def encodeVideo(info):
         "--output",
         info["video"]["output"],
         "--frames",
-        str(video.framecount),
+        str(video.num_frames),
     ]
 
     if inputInfo.ColorRange:
