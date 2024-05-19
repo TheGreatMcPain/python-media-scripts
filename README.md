@@ -64,13 +64,4 @@ and marking subs as forced where they overlap. This was very useful for the
 Planet of the Apes reboot movies, where I wanted to burn in the sign language
 subtitles, but didn't want any overlaps from the regular subtitles.
 
-## 2D to 3D Subtitle Convertion Scripts
-
-`3d-misc` has a bunch of WIP scripts that are ported code from
-the program BD3D2MK3D which is written 'tcl'. I'm working on porting some
-of the subtitle related stuff to Python. They do require ''3D-Plane' metadata
-which can be obtained by `OFSExtractor` or `MVCPlanes2OFS`.
-`OFSExtractor` can be found [here](https://gitlab.com/TheGreatMcPain/OFSExtractor),
-but both can be found in `BD3D2MK3D`'s `toolset` folder.
-
 #### Usage for these scripts are in their respective folders.
