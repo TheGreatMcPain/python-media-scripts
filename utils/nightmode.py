@@ -190,6 +190,10 @@ def nightmodeTrack(
         normalized = normAudio(inFile, outFile, maxdB)
         if not normalized:
             shutil.copy2(inFile, outFile)
+        if codec == "both":
+            flacToM4a(outFile, True)
+        if codec == "aac":
+            flacToM4a(outFile)
         return
 
     normfile = "prenorm.flac"
