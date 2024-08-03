@@ -71,6 +71,8 @@ def main():
                     exclude.append(info["video"]["vapoursynthScript"])
                 deleteList = list(set(os.listdir(folder)) - set(exclude))
                 for file in deleteList:
+                    if os.path.isdir(file):
+                        continue
                     filePath = os.path.join(folder, file)
                     print("Deleting:", filePath)
                     os.remove(filePath)
