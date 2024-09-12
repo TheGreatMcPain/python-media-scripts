@@ -105,6 +105,45 @@ class videoInfo:
                 if self.HDR10MasterDisplayData:
                     self.HDR10 = True
 
+    def extractDoviHEVC(self, outFile: str):
+        if not shutil.which(self.DoviTool):
+            return 1
+
+        # Convert RPU to profile 8.1 and drop Enhancement Layer.
+        doviCmd = [
+            "dovi_tool",
+            "-m",
+            "2",
+            "convert",
+            "--discard",
+            "--output",
+            outFile,
+            "-",
+        ]
+
+        ffmpegProcess = sp.Popen(
+            (
+                "ffmpeg",
+                "-loglevel",
+                "fatal",
+                "-stats",
+                "-i",
+                self.inFile,
+                "-map",
+                "0:0",
+                "-c:v",
+                "copy",
+                "-vbsf",
+                "hevc_mp4toannexb",
+                "-f",
+                "hevc",
+                "-",
+            ),
+            stdout=sp.PIPE,
+        )
+        DoviProcess = sp.Popen(doviCmd, stdin=ffmpegProcess.stdout)
+        DoviProcess.communicate()
+
     def extractHDR10PlusMetadata(self):
         if not shutil.which(self.HDR10PlusTool):
             return 1

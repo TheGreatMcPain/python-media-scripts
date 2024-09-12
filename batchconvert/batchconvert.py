@@ -227,6 +227,12 @@ def encodeVideo(info):
     inputInfo = videoinfo.videoInfo(info["sourceFile"])
 
     if not info["video"]["convert"]:
+        if inputInfo.DolbyVision:
+            print("Dolby Vision detected!!")
+            print("Extracting video stream and converting it to DV profile 8.1")
+            inputInfo.extractDoviHEVC(info["video"]["output"])
+            return 0
+
         # Assume video in on track 0.
         mkvOutTrack = "0:" + info["video"]["output"]
         cmd = ["mkvextract", info["sourceFile"], "tracks", mkvOutTrack]
