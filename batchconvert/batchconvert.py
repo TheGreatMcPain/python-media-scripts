@@ -169,23 +169,26 @@ def mergeMKV(info):
             ]
 
             if track["nightmode"]:
+                titleSuffix = ""
                 if "flac" in track["nightmodeCodec"]:
                     extension = "flac"
+                    titleSuffix = "(FLAC)"
                 else:
                     extension = "m4a"
+                    titleSuffix = "(AAC)"
                 cmd += [
                     "--track-name",
-                    "0:" + track["nightmodeDownmixOnlyName"],
+                    "0:" + track["nightmodeDownmixOnlyName"] + " " + titleSuffix,
                     "--language",
                     "0:" + track["language"],
                     "nightmode-" + track["id"] + "." + extension,
                     "--track-name",
-                    "0:" + track["nightmodeLoudnormName"],
+                    "0:" + track["nightmodeLoudnormName"] + " " + titleSuffix,
                     "--language",
                     "0:" + track["language"],
                     "nightmode-loudnorm-" + track["id"] + "." + extension,
                     "--track-name",
-                    "0:" + track["nightmodeDrcName"],
+                    "0:" + track["nightmodeDrcName"] + " " + titleSuffix,
                     "--language",
                     "0:" + track["language"],
                     "nightmode-drc-" + track["id"] + "." + extension,
