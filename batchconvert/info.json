@@ -49,6 +49,14 @@
   ],
   "subs": [
     {
+      "extension": "srt",
+      "sup2srt": true,
+      "default": "0",
+      "id": "6",
+      "language": "eng",
+      "title": "English Subtitles (SRT)"
+    },
+    {
       "extension": "sup",
       "default": "0",
       "id": "6",

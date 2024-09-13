@@ -99,6 +99,7 @@ def convertMKV(infoFile):
 
     if "juststarted" == status:
         extractTracks(info)
+        subtitlesOCR(info)
         status = writeResume("extracted")
         print()
     if "extracted" == status:
@@ -475,6 +476,35 @@ def createNightmodeTracks(info):
             nightmode.nightmodeTrack(inFile, loudnormFile, codec, True, False)
             print("Creating 'DRC+Loudnorm' track.")
             nightmode.nightmodeTrack(inFile, DRCFile, codec, True, True)
+
+
+def subtitlesOCR(info):
+    subs = None
+    if "subs" in info:
+        subs = info["subs"]
+    if not subs:
+        return 0
+    if not shutil.which("sup2srt"):
+        print("'sup2srt' is not found!")
+        exit(1)
+
+    for track in subs:
+        if "sup2srt" in track:
+            continue
+        if track["sup2srt"]:
+            cmd = [
+                "sup2srt",
+                "-l",
+                track["language"],
+                "-o",
+                "subtitles-" + track["id"] + "." + track["extension"],
+                "subtitles-" + track["id"] + ".sup",
+            ]
+
+            print("\nCreating SRT of track {} via sup2srt.".format(track["id"]))
+            print(" ".join(cmd))
+            sup2srtProcess = sp.Popen(cmd)
+            sup2srtProcess.communicate()
 
 
 def extractTracks(info):
