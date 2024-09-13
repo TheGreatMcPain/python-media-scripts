@@ -25,23 +25,23 @@
   "audio": [
     {
       "extension": "flac",
-      "convert": "yes",
+      "convert": true,
       "ffmpegopts": ["-compression_level", "8", "-acodec", "flac"],
-      "nightmode": "yes",
+      "nightmode": true,
       "nightmodeCodec": "flac",
       "nightmodeDownmixOnlyName": "Stereo Nightmode DownmixOnly (FLAC)",
       "nightmodeLoudnormName": "Stereo Nightmode Loudnorm (FLAC)",
       "nightmodeDrcName": "Stereo Nightmode DRC+Loudnorm (FLAC)",
-      "default": "1",
+      "default": true,
       "id": "1",
       "language": "eng",
       "title": "7.1 Surround (FLAC)"
     },
     {
       "extension": "ac3",
-      "convert": "no",
-      "nightmode": "no",
-      "default": "0",
+      "convert": false,
+      "nightmode": false,
+      "default": false,
       "id": "5",
       "language": "eng",
       "title": "Commentary (AC3)"
@@ -51,21 +51,21 @@
     {
       "extension": "srt",
       "sup2srt": true,
-      "default": "0",
+      "default": false,
       "id": "6",
       "language": "eng",
       "title": "English Subtitles (SRT)"
     },
     {
       "extension": "sup",
-      "default": "0",
+      "default": false,
       "id": "6",
       "language": "eng",
       "title": "English Subtitles (PGS)"
     },
     {
       "extension": "sup",
-      "default": "0",
+      "default": false,
       "id": "9",
       "language": "eng",
       "title": "English Commentary Subtitles (PGS)"

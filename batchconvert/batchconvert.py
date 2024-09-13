@@ -164,11 +164,11 @@ def mergeMKV(info):
                 "--language",
                 "0:" + track["language"],
                 "--default-track",
-                "0:" + track["default"],
+                "0:" + str(int(track["default"])),  # 'True' should become '1'
                 "audio-" + track["id"] + "." + extension,
             ]
 
-            if "yes" in track["nightmode"]:
+            if track["nightmode"]:
                 if "flac" in track["nightmodeCodec"]:
                     extension = "flac"
                 else:
@@ -178,22 +178,16 @@ def mergeMKV(info):
                     "0:" + track["nightmodeDownmixOnlyName"],
                     "--language",
                     "0:" + track["language"],
-                    "--default-track",
-                    "0:" + track["default"],
                     "nightmode-" + track["id"] + "." + extension,
                     "--track-name",
                     "0:" + track["nightmodeLoudnormName"],
                     "--language",
                     "0:" + track["language"],
-                    "--default-track",
-                    "0:" + track["default"],
                     "nightmode-loudnorm-" + track["id"] + "." + extension,
                     "--track-name",
                     "0:" + track["nightmodeDrcName"],
                     "--language",
                     "0:" + track["language"],
-                    "--default-track",
-                    "0:" + track["default"],
                     "nightmode-drc-" + track["id"] + "." + extension,
                 ]
 
@@ -211,7 +205,7 @@ def mergeMKV(info):
                 "--language",
                 "0:" + track["language"],
                 "--default-track",
-                "0:" + track["default"],
+                "0:" + str(int(track["default"])),
                 supFile,
             ]
 
@@ -462,7 +456,7 @@ def createNightmodeTracks(info):
         return
     audio = info["audio"]
     for track in audio:
-        if "yes" in track["nightmode"]:
+        if track["nightmode"]:
             print("Creating nightmode tracks for trackid:", track["id"])
             codec = track["nightmodeCodec"]
             extension = track["extension"]
@@ -521,7 +515,11 @@ def extractTracks(info):
     cmd = ["ffmpeg", "-y", "-i", sourceFile]
     if audio != 0:
         for track in audio:
-            if "yes" in track["convert"]:
+            if track["convert"]:
+                if "ffmpegopts" not in track:
+                    print("'convert' enabled, but 'ffmpegopts' not found!")
+                    exit(1)
+
                 extension = track["extension"]
                 cmd += ["-map", "0:" + track["id"]]
                 cmd += track["ffmpegopts"]
@@ -533,7 +531,7 @@ def extractTracks(info):
     cmd = ["mkvextract", sourceFile, "tracks"]
     if audio != 0:
         for track in audio:
-            if "no" in track["convert"]:
+            if not track["convert"]:
                 extension = track["extension"]
                 cmd += [track["id"] + ":" + "audio-" + track["id"] + "." + extension]
 
