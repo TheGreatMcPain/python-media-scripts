@@ -486,7 +486,7 @@ def subtitlesOCR(info):
         exit(1)
 
     for track in subs:
-        if "sup2srt" in track:
+        if "sup2srt" not in track:
             continue
         if track["sup2srt"]:
             cmd = [
