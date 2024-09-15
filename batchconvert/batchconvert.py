@@ -9,6 +9,7 @@ import threading
 import vapoursynth as vs
 import importlib.util
 import xml.etree.cElementTree as ET
+from subtitle_filter import Subtitles
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from utils import videoinfo
@@ -503,6 +504,14 @@ def subtitlesOCR(info):
             sup2srtProcess = sp.Popen(cmd)
             sup2srtProcess.communicate()
 
+            if "filter" not in track:
+                continue
+            if track["filter"]:
+                print("Creating non-SDH subtitles.")
+                subs = Subtitles("subtitles-" + track["id"] + "." + track["extension"])
+                subs.filter()
+                subs.save()
+
 
 def extractTracks(info):
     sourceFile = info["sourceFile"]
@@ -540,11 +549,14 @@ def extractTracks(info):
 
     if subs != 0:
         for track in subs:
-            if "external" not in track:
-                extension = track["extension"]
-                cmd += [
-                    track["id"] + ":" + "subtitles-" + track["id"] + "." + extension
-                ]
+            if "sup2srt" in track:
+                continue
+            if "external" in track:
+                continue
+            extension = track["extension"]
+            cmd += [
+                track["id"] + ":" + "subtitles-" + track["id"] + "." + extension
+            ]
 
     cmd += ["chapters", "chapters.xml"]
 
