@@ -550,7 +550,8 @@ def extractTracks(info):
     if subs != 0:
         for track in subs:
             if "sup2srt" in track:
-                continue
+                if track["sup2srt"]:
+                    continue
             if "external" in track:
                 continue
             extension = track["extension"]
