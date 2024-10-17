@@ -143,6 +143,7 @@ class videoInfo:
         )
         DoviProcess = sp.Popen(doviCmd, stdin=ffmpegProcess.stdout)
         DoviProcess.communicate()
+        return 0
 
     def extractHDR10PlusMetadata(self):
         if not shutil.which(self.HDR10PlusTool):
@@ -176,6 +177,7 @@ class videoInfo:
         )
         HDR10PlusProcess = sp.Popen(HDR10PlusCmd, stdin=ffmpegProcess.stdout)
         HDR10PlusProcess.communicate()
+        return 0
 
     def extractDoviRPU(self):
         if not shutil.which(self.DoviTool):
@@ -211,6 +213,7 @@ class videoInfo:
         )
         doviProcess = sp.Popen(doviCmd, stdin=ffmpegProcess.stdout)
         doviProcess.communicate()
+        return 0
 
     def __getContentLightLeveData(self, sideDataList):
         for sideData in sideDataList:
