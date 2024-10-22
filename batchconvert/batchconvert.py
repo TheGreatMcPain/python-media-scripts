@@ -100,6 +100,7 @@ def convertMKV(infoFile):
 
     if "juststarted" == status:
         extractTracks(info)
+        prepForcedSubs(info)
         subtitlesOCR(info)
         status = writeResume("extracted")
         print()
@@ -108,7 +109,6 @@ def convertMKV(infoFile):
         status = writeResume("nightmode")
         print()
     if "nightmode" == status:
-        prepForcedSubs(info)
         print()
         encodeVideo(info)
         status = writeResume("encoded")
@@ -401,8 +401,7 @@ def prepForcedSubs(info):
             print("Subtitles doesn't exist!")
             return 0
 
-        cmd = BDSUP2SUB
-        cmd += [
+        cmd = BDSUP2SUB + [
             "--forced-only",
             "--output",
             "subtitles-forced-" + track["id"] + ".sup",
@@ -415,8 +414,11 @@ def prepForcedSubs(info):
             sourceFile = "subtitles-" + track["id"] + ".sup"
             os.mkdir("subtitles")
             os.chdir("subtitles")
-            cmd = BDSUP2SUB
-            cmd += ["--output", "subtitles.xml", os.path.join("..", sourceFile)]
+            cmd = BDSUP2SUB + [
+                "--output",
+                "subtitles.xml",
+                os.path.join("..", sourceFile),
+            ]
             print("Exporting to BDXML.")
             p = sp.Popen(cmd, stdout=sp.DEVNULL, stderr=sp.DEVNULL)
             p.communicate()
@@ -432,8 +434,7 @@ def prepForcedSubs(info):
             tree.write("subtitles-new.xml")
             os.chdir("..")
             print("Exporting to", sourceFile)
-            cmd = BDSUP2SUB
-            cmd += [
+            cmd = BDSUP2SUB + [
                 "--forced-only",
                 "--output",
                 "subtitles-temp.sup",
@@ -441,8 +442,7 @@ def prepForcedSubs(info):
             ]
             p = sp.Popen(cmd, stdout=sp.DEVNULL, stderr=sp.DEVNULL)
             p.communicate()
-            cmd = BDSUP2SUB
-            cmd += [
+            cmd = BDSUP2SUB + [
                 "--force-all",
                 "clear",
                 "--output",
@@ -562,9 +562,7 @@ def extractTracks(info):
             if "external" in track:
                 continue
             extension = track["extension"]
-            cmd += [
-                track["id"] + ":" + "subtitles-" + track["id"] + "." + extension
-            ]
+            cmd += [track["id"] + ":" + "subtitles-" + track["id"] + "." + extension]
 
     cmd += ["chapters", "chapters.xml"]
 
