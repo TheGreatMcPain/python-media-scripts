@@ -465,15 +465,22 @@ def createNightmodeTracks(info):
             codec = track["nightmodeCodec"]
             extension = track["extension"]
             inFile = "audio-" + track["id"] + "." + extension
+            initialDownmixFile = "downmix-" + track["id"] + ".flac"
             downmixFile = "nightmode-" + track["id"] + ".flac"
             loudnormFile = "nightmode-loudnorm-" + track["id"] + ".flac"
             DRCFile = "nightmode-drc-" + track["id"] + ".flac"
+            print("Downmixing audio to stereo.")
+            nightmode.downmixTrack(inFile, initialDownmixFile)
             print("Creating 'DownmixOnly' track.")
-            nightmode.nightmodeTrack(inFile, downmixFile, codec, True, False)
+            nightmode.nightmodeTrack(
+                initialDownmixFile, downmixFile, codec, True, False
+            )
             print("Creating 'Loudnorm' track.")
-            nightmode.nightmodeTrack(inFile, loudnormFile, codec, True, False)
+            nightmode.nightmodeTrack(
+                initialDownmixFile, loudnormFile, codec, True, False
+            )
             print("Creating 'DRC+Loudnorm' track.")
-            nightmode.nightmodeTrack(inFile, DRCFile, codec, True, True)
+            nightmode.nightmodeTrack(initialDownmixFile, DRCFile, codec, True, True)
 
 
 def subtitlesOCR(info):
