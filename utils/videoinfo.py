@@ -311,6 +311,8 @@ class videoInfo:
 
     def __getFrameSideDataList(self, stream):
         for frame in self.ffprobeInfo["frames"]:
+            if "stream_index" not in frame:
+                continue
             if frame["stream_index"] == stream["index"]:
                 if "side_data_list" not in frame:
                     return None
