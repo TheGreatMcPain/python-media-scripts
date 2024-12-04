@@ -98,6 +98,10 @@ def convertMKV(infoFile):
 
     info = getInfo(infoFile)
 
+    if not os.path.isfile(info["sourceFile"]):
+        print("'{}' not found! skipping".format(info["sourceFile"]))
+        return
+
     if "juststarted" == status:
         extractTracks(info)
         prepForcedSubs(info)
