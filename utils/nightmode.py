@@ -2,6 +2,7 @@ import json
 import subprocess as sp
 import time
 import os
+import pathlib
 import shutil
 
 # Nightmode Downmixing settings.
@@ -196,7 +197,7 @@ def nightmodeTrack(
             flacToM4a(outFile)
         return
 
-    normfile = "prenorm.flac"
+    normfile = pathlib.Path(outFile).stem + "-prenorm.flac"
     ffFilterList = []
     if withDRC:
         ffFilterList.append("acompressor=ratio=4")
