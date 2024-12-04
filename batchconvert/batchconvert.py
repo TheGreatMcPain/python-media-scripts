@@ -473,18 +473,43 @@ def createNightmodeTracks(info):
             downmixFile = "nightmode-" + track["id"] + ".flac"
             loudnormFile = "nightmode-loudnorm-" + track["id"] + ".flac"
             DRCFile = "nightmode-drc-" + track["id"] + ".flac"
+
             print("Downmixing audio to stereo.")
             nightmode.downmixTrack(inFile, initialDownmixFile)
+
+            downmixThread = threading.Thread(
+                target=nightmode.nightmodeTrack,
+                args=(initialDownmixFile, downmixFile, codec, False, False),
+            )
+            loudnormThread = threading.Thread(
+                target=nightmode.nightmodeTrack,
+                args=(initialDownmixFile, loudnormFile, codec, True, False),
+            )
+            drcThread = threading.Thread(
+                target=nightmode.nightmodeTrack,
+                args=(initialDownmixFile, DRCFile, codec, True, True),
+            )
+
             print("Creating 'DownmixOnly' track.")
-            nightmode.nightmodeTrack(
-                initialDownmixFile, downmixFile, codec, True, False
-            )
+            downmixThread.start()
             print("Creating 'Loudnorm' track.")
-            nightmode.nightmodeTrack(
-                initialDownmixFile, loudnormFile, codec, True, False
-            )
+            loudnormThread.start()
             print("Creating 'DRC+Loudnorm' track.")
-            nightmode.nightmodeTrack(initialDownmixFile, DRCFile, codec, True, True)
+            drcThread.start()
+
+            downmixThread.join()
+            loudnormThread.join()
+            drcThread.join()
+
+            # print("Creating 'DownmixOnly' track.")
+            # nightmode.nightmodeTrack(
+            #     initialDownmixFile, downmixFile, codec, False, False
+            # )
+            # print("Creating 'Loudnorm' track.")
+            # nightmode.nightmodeTrack(
+            #     initialDownmixFile, loudnormFile, codec, True, False
+            # )
+            # nightmode.nightmodeTrack(initialDownmixFile, DRCFile, codec, True, True)
 
 
 def subtitlesOCR(info):
