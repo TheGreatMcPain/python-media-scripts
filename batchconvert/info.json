@@ -49,19 +49,28 @@
   ],
   "subs": [
     {
+      "extension": "filter.srt",
+      "filter": true,
+      "sup2srt": true,
+      "default": false,
+      "id": "6",
+      "language": "eng",
+      "title": "English SDH Subtitles (SRT)"
+    },
+    {
       "extension": "srt",
       "sup2srt": true,
       "default": false,
       "id": "6",
       "language": "eng",
-      "title": "English Subtitles (SRT)"
+      "title": "English SDH Subtitles (SRT)"
     },
     {
       "extension": "sup",
       "default": false,
       "id": "6",
       "language": "eng",
-      "title": "English Subtitles (PGS)"
+      "title": "English SDH Subtitles (PGS)"
     },
     {
       "extension": "sup",
