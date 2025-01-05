@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import json
 import os
+import hashlib
 import pathlib
 import sys
 import shutil
@@ -159,22 +160,19 @@ def mergeMKV(info):
 
     if "audio" in info:
         for track in info["audio"]:
-            extension = track["extension"]
-
             cmd += [
                 "--track-name",
                 "0:" + track["title"],
                 "--language",
                 "0:" + track["language"],
                 "--default-track",
-                "0:" + str(int(track["default"])),  # 'True' should become '1'
-                "audio-" + track["id"] + "." + extension,
+                "0:" + str(int(track["default"])),
+                getOutFile("audio", track),
             ]
 
     if "subs" in info:
         for track in info["subs"]:
-            extension = track["extension"]
-            supFile = "subtitles-" + track["id"] + "." + extension
+            supFile = getOutFile("subtitles", track)
 
             if "external" in track:
                 supFile = track["external"]
@@ -380,14 +378,14 @@ def prepForcedSubs(info):
         cmd = BDSUP2SUB + [
             "--forced-only",
             "--output",
-            "subtitles-forced-" + track["id"] + ".sup",
-            "subtitles-" + track["id"] + ".sup",
+            getOutFile("subtitles-forced", track),
+            getOutFile("subtitles", track),
         ]
         p = sp.Popen(cmd, stdout=sp.DEVNULL, stderr=sp.DEVNULL)
         p.communicate()
-        print("Checking if 'subtitles-" + track["id"] + ".sup' has forced subs")
-        if os.path.isfile("subtitles-forced-" + track["id"] + ".sup"):
-            sourceFile = "subtitles-" + track["id"] + ".sup"
+        print("Checking if '" + getOutFile("subtitles", track) + "' has forced subs")
+        if os.path.isfile(getOutFile("subtitles-forced", track)):
+            sourceFile = getOutFile("subtitles", track)
             os.mkdir("subtitles")
             os.chdir("subtitles")
             cmd = BDSUP2SUB + [
@@ -445,13 +443,25 @@ def subtitlesOCR(info):
         if "sup2srt" not in track:
             continue
         if track["sup2srt"]:
+            sourceTrack = None
+            for x in subs:
+                if "sup2srt" not in x and x["id"] == track["id"]:
+                    sourceTrack = x
+                    break
+                if not x["sup2srt"] and x["id"] == track["id"]:
+                    sourceTrack = x
+                    break
+            if not sourceTrack:
+                print("'sup2srt' enabled, but no matching 'sup' track.")
+                exit(1)
+
             cmd = [
                 "sup2srt",
                 "-l",
                 track["language"],
                 "-o",
-                "subtitles-" + track["id"] + "." + track["extension"],
-                "subtitles-" + track["id"] + ".sup",
+                getOutFile("subtitles", track),
+                getOutFile("subtitles", sourceTrack),
             ]
 
             print("\nCreating SRT of track {} via sup2srt.".format(track["id"]))
@@ -463,9 +473,9 @@ def subtitlesOCR(info):
                 continue
             if track["filter"]:
                 print("Creating non-SDH subtitles.")
-                subs = Subtitles("subtitles-" + track["id"] + "." + track["extension"])
-                subs.filter()
-                subs.save()
+                srt = Subtitles(getOutFile("subtitles", track))
+                srt.filter()
+                srt.save()
 
 
 def extractTracks(info):
@@ -481,7 +491,6 @@ def extractTracks(info):
 
     if audio != 0:
         for track in audio:
-            outFile = "audio-" + track["id"] + "." + track["extension"]
             if track["convert"]:
                 normalize: bool = False
                 encodeOpts = None
@@ -525,8 +534,12 @@ def extractTracks(info):
 
                 if normalize:
                     ffmpeg_normalize.post_filter = ",".join(Filter)
-                    normTemp = "audio-norm-temp-{}.flac".format(track["id"])
-                    # Creating a flac file, because flac decodes faster than TrueHD/DTSHD.
+                    normTemp = "audio-norm-temp-{}.flac".format(
+                        hashlib.sha1(
+                            json.dumps(track, sort_keys=True).encode("utf-8")
+                        ).hexdigest()
+                    )
+                    # Creating a flac file, because it'll go faster than reading from the source.
                     # Plus, 'ffmpeg-normalize' doesn't have an option to just output one audio track.
                     print("'normalize' enabled! creating intermediate 'flac' file.")
                     nightmode.ffmpegAudio(
@@ -545,8 +558,11 @@ def extractTracks(info):
                         track["id"],
                     )
                     print("Normalizing and converting audio using 'ffmpeg-normalize'")
-                    ffmpeg_normalize.add_media_file(normTemp, outFile)
+                    ffmpeg_normalize.add_media_file(
+                        normTemp, getOutFile("audio", track)
+                    )
                     ffmpeg_normalize.run_normalization()
+                    os.remove(normTemp)
                 else:
                     cmd = ["ffmpeg", "-y", "-i", sourceFile]
                     cmd += ["-map", "0:" + track["id"]]
@@ -555,7 +571,7 @@ def extractTracks(info):
                         cmd += encodeOpts
                     if len(Filter) > 0:
                         cmd += ["-af", ",".join(Filter)]
-                    cmd += [outFile]
+                    cmd += [getOutFile("audio", track)]
 
                     print("Converting Audio via ffmpeg")
                     nightmode.ffmpegAudio(cmd, sourceFile, track["id"])
@@ -564,8 +580,7 @@ def extractTracks(info):
     if audio != 0:
         for track in audio:
             if not track["convert"]:
-                extension = track["extension"]
-                cmd += [track["id"] + ":" + "audio-" + track["id"] + "." + extension]
+                cmd += [track["id"] + ":" + getOutFile("audio", track)]
 
     if subs != 0:
         for track in subs:
@@ -574,8 +589,7 @@ def extractTracks(info):
                     continue
             if "external" in track:
                 continue
-            extension = track["extension"]
-            cmd += [track["id"] + ":" + "subtitles-" + track["id"] + "." + extension]
+            cmd += [track["id"] + ":" + getOutFile("subtitles", track)]
 
     cmd += ["chapters", "chapters.xml"]
 
@@ -593,6 +607,15 @@ def getInfo(infoFile):
         exit(1)
 
     return info
+
+
+def getOutFile(base: str, track: dict):
+    ext = track["extension"]
+    trackId = track["id"]
+    trackHash = hashlib.sha1(
+        json.dumps(track, sort_keys=True).encode("utf-8")
+    ).hexdigest()
+    return "{}-{}-{}.{}".format(base, trackId, trackHash, ext)
 
 
 # Based on this: https://code-examples.net/en/q/1ba5e27
