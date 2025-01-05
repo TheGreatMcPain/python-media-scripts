@@ -24,18 +24,83 @@
   },
   "audio": [
     {
-      "extension": "flac",
-      "convert": true,
-      "ffmpegopts": ["-compression_level", "8", "-acodec", "flac"],
-      "nightmode": true,
-      "nightmodeCodec": "aac",
-      "nightmodeDownmixOnlyName": "Stereo Nightmode DownmixOnly",
-      "nightmodeLoudnormName": "Stereo Nightmode Loudnorm",
-      "nightmodeDrcName": "Stereo Nightmode DRC+Loudnorm",
+      "extension": "truehd",
+      "convert": false,
       "default": true,
       "id": "1",
       "language": "eng",
-      "title": "7.1 Surround (FLAC)"
+      "title": "7.1 Atmos (TRUEHD)"
+    },
+    {
+      "extension": "m4a",
+      "convert": {
+        "normalize": false,
+        "codec": "aac",
+        "encodeOpts": ["-b:a", "256K"],
+        "filters": [
+          {
+            "downmixStereo": {
+              "center": 1.0,
+              "lfe": 0.707,
+              "surrounds": 0.707
+            }
+          }
+        ]
+      },
+      "default": true,
+      "id": "1",
+      "language": "eng",
+      "title": "Stereo 'downmix' (AAC)"
+    },
+    {
+      "extension": "m4a",
+      "convert": {
+        "codec": "aac",
+        "encodeOpts": ["-b:a", "256K"],
+        "filters": [
+          { "ffmpeg": "dynaudnorm=compress=27.0:gausssize=53" },
+          {
+            "downmixStereo": {
+              "center": 1.0,
+              "lfe": 0.707,
+              "surrounds": 0.707
+            }
+          }
+        ]
+      },
+      "default": true,
+      "id": "1",
+      "language": "eng",
+      "title": "Stereo 'dynaudnorm,downmix' (AAC)"
+    },
+    {
+      "extension": "m4a",
+      "convert": {
+        "codec": "aac",
+        "encodeOpts": ["-b:a", "256K"],
+        "filters": [
+          { "ffmpeg": "dynaudnorm=compress=27.0:gausssize=53" },
+          { "ffmpeg": "speechnorm=channels=FC" },
+          {
+            "downmixStereo": {
+              "center": 1.0,
+              "lfe": 0.707,
+              "surrounds": 0.707
+            }
+          },
+          {
+            "normalize": {
+              "loudness_range_target": "keep",
+              "target_level": -23,
+              "true_peak": -0.5
+            }
+          }
+        ]
+      },
+      "default": true,
+      "id": "1",
+      "language": "eng",
+      "title": "Stereo 'dynaudnorm,speechnorm,downmix,loudnorm' (AAC)"
     },
     {
       "extension": "ac3",

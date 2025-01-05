@@ -9,6 +9,8 @@ import threading
 import vapoursynth as vs
 import importlib.util
 import xml.etree.cElementTree as ET
+from ffmpeg_normalize import FFmpegNormalize
+
 from subtitle_filter import Subtitles
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -109,10 +111,6 @@ def convertMKV(infoFile):
         status = writeResume("extracted")
         print()
     if "extracted" == status:
-        createNightmodeTracks(info)
-        status = writeResume("nightmode")
-        print()
-    if "nightmode" == status:
         print()
         encodeVideo(info)
         status = writeResume("encoded")
@@ -172,32 +170,6 @@ def mergeMKV(info):
                 "0:" + str(int(track["default"])),  # 'True' should become '1'
                 "audio-" + track["id"] + "." + extension,
             ]
-
-            if track["nightmode"]:
-                titleSuffix = ""
-                if "flac" in track["nightmodeCodec"]:
-                    extension = "flac"
-                    titleSuffix = "(FLAC)"
-                else:
-                    extension = "m4a"
-                    titleSuffix = "(AAC)"
-                cmd += [
-                    "--track-name",
-                    "0:" + track["nightmodeDownmixOnlyName"] + " " + titleSuffix,
-                    "--language",
-                    "0:" + track["language"],
-                    "nightmode-" + track["id"] + "." + extension,
-                    "--track-name",
-                    "0:" + track["nightmodeLoudnormName"] + " " + titleSuffix,
-                    "--language",
-                    "0:" + track["language"],
-                    "nightmode-loudnorm-" + track["id"] + "." + extension,
-                    "--track-name",
-                    "0:" + track["nightmodeDrcName"] + " " + titleSuffix,
-                    "--language",
-                    "0:" + track["language"],
-                    "nightmode-drc-" + track["id"] + "." + extension,
-                ]
 
     if "subs" in info:
         for track in info["subs"]:
@@ -459,59 +431,6 @@ def prepForcedSubs(info):
             os.remove("subtitles-temp.sup")
 
 
-def createNightmodeTracks(info):
-    if "audio" not in info:
-        return
-    audio = info["audio"]
-    for track in audio:
-        if track["nightmode"]:
-            print("Creating nightmode tracks for trackid:", track["id"])
-            codec = track["nightmodeCodec"]
-            extension = track["extension"]
-            inFile = "audio-" + track["id"] + "." + extension
-            initialDownmixFile = "downmix-" + track["id"] + ".flac"
-            downmixFile = "nightmode-" + track["id"] + ".flac"
-            loudnormFile = "nightmode-loudnorm-" + track["id"] + ".flac"
-            DRCFile = "nightmode-drc-" + track["id"] + ".flac"
-
-            print("Downmixing audio to stereo.")
-            nightmode.downmixTrack(inFile, initialDownmixFile)
-
-            downmixThread = threading.Thread(
-                target=nightmode.nightmodeTrack,
-                args=(initialDownmixFile, downmixFile, codec, False, False),
-            )
-            loudnormThread = threading.Thread(
-                target=nightmode.nightmodeTrack,
-                args=(initialDownmixFile, loudnormFile, codec, True, False),
-            )
-            drcThread = threading.Thread(
-                target=nightmode.nightmodeTrack,
-                args=(initialDownmixFile, DRCFile, codec, True, True),
-            )
-
-            print("Creating 'DownmixOnly' track.")
-            downmixThread.start()
-            print("Creating 'Loudnorm' track.")
-            loudnormThread.start()
-            print("Creating 'DRC+Loudnorm' track.")
-            drcThread.start()
-
-            downmixThread.join()
-            loudnormThread.join()
-            drcThread.join()
-
-            # print("Creating 'DownmixOnly' track.")
-            # nightmode.nightmodeTrack(
-            #     initialDownmixFile, downmixFile, codec, False, False
-            # )
-            # print("Creating 'Loudnorm' track.")
-            # nightmode.nightmodeTrack(
-            #     initialDownmixFile, loudnormFile, codec, True, False
-            # )
-            # nightmode.nightmodeTrack(initialDownmixFile, DRCFile, codec, True, True)
-
-
 def subtitlesOCR(info):
     subs = None
     if "subs" in info:
@@ -560,21 +479,86 @@ def extractTracks(info):
     else:
         subs = 0
 
-    cmd = ["ffmpeg", "-y", "-i", sourceFile]
     if audio != 0:
         for track in audio:
+            outFile = "audio-" + track["id"] + "." + track["extension"]
             if track["convert"]:
-                if "ffmpegopts" not in track:
-                    print("'convert' enabled, but 'ffmpegopts' not found!")
-                    exit(1)
+                normalize: bool = False
+                encodeOpts = None
+                Filter: list = []
+                ffmpeg_normalize = FFmpegNormalize(
+                    audio_codec=track["convert"]["codec"],
+                    extra_output_options=encodeOpts,
+                )
 
-                extension = track["extension"]
-                cmd += ["-map", "0:" + track["id"]]
-                cmd += track["ffmpegopts"]
-                cmd += ["audio-" + track["id"] + "." + extension]
+                if [] != track["convert"]["encodeOpts"]:
+                    encodeOpts = track["convert"]["encodeOpts"]
 
-                print("Converting Audio via ffmpeg")
-                nightmode.ffmpegAudio(cmd, sourceFile, track["id"])
+                for ffFilter in track["convert"]["filters"]:
+                    if "ffmpeg" in ffFilter.keys():
+                        Filter.append(ffFilter["ffmpeg"])
+
+                    if "downmixStereo" in ffFilter.keys():
+                        downmixAlgo = ffFilter["downmixStereo"]
+                        Filter.append(
+                            nightmode.getffFilter(
+                                surVol=downmixAlgo["surrounds"],
+                                lfeVol=downmixAlgo["lfe"],
+                                centerVol=downmixAlgo["center"],
+                            )
+                        )
+
+                    if "normalize" in ffFilter.keys():
+                        normalize = True
+                        ffmpeg_normalize.pre_filter = ",".join(Filter)
+                        Filter = []
+                        if "keep" == ffFilter["normalize"]["loudness_range_target"]:
+                            ffmpeg_normalize.keep_lra_above_loudness_range_target = True
+                        else:
+                            ffmpeg_normalize.loudness_range_target = ffFilter[
+                                "normalize"
+                            ]["loudness_range_target"]
+                        ffmpeg_normalize.target_level = ffFilter["normalize"][
+                            "target_level"
+                        ]
+                        ffmpeg_normalize.true_peak = ffFilter["normalize"]["true_peak"]
+
+                if normalize:
+                    ffmpeg_normalize.post_filter = ",".join(Filter)
+                    normTemp = "audio-norm-temp-{}.flac".format(track["id"])
+                    # Creating a flac file, because flac decodes faster than TrueHD/DTSHD.
+                    # Plus, 'ffmpeg-normalize' doesn't have an option to just output one audio track.
+                    print("'normalize' enabled! creating intermediate 'flac' file.")
+                    nightmode.ffmpegAudio(
+                        [
+                            "ffmpeg",
+                            "-y",
+                            "-i",
+                            sourceFile,
+                            "-map",
+                            "0:{}".format(track["id"]),
+                            "-acodec",
+                            "flac",
+                            normTemp,
+                        ],
+                        sourceFile,
+                        track["id"],
+                    )
+                    print("Normalizing and converting audio using 'ffmpeg-normalize'")
+                    ffmpeg_normalize.add_media_file(normTemp, outFile)
+                    ffmpeg_normalize.run_normalization()
+                else:
+                    cmd = ["ffmpeg", "-y", "-i", sourceFile]
+                    cmd += ["-map", "0:" + track["id"]]
+                    cmd += ["-c:a", track["convert"]["codec"]]
+                    if encodeOpts:
+                        cmd += encodeOpts
+                    if len(Filter) > 0:
+                        cmd += ["-af", ",".join(Filter)]
+                    cmd += [outFile]
+
+                    print("Converting Audio via ffmpeg")
+                    nightmode.ffmpegAudio(cmd, sourceFile, track["id"])
 
     cmd = ["mkvextract", sourceFile, "tracks"]
     if audio != 0:
