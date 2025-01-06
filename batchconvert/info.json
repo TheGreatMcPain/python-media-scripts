@@ -58,7 +58,7 @@
         "codec": "aac",
         "encodeOpts": ["-b:a", "256K"],
         "filters": [
-          { "ffmpeg": "dynaudnorm=compress=27.0:gausssize=53" },
+          { "ffmpeg": "speechnorm" },
           {
             "downmixStereo": {
               "center": 1.0,
@@ -71,7 +71,7 @@
       "default": true,
       "id": "1",
       "language": "eng",
-      "title": "Stereo 'dynaudnorm,downmix' (AAC)"
+      "title": "Stereo 'speechnorm,downmix' (AAC)"
     },
     {
       "extension": "m4a",
@@ -79,8 +79,8 @@
         "codec": "aac",
         "encodeOpts": ["-b:a", "256K"],
         "filters": [
-          { "ffmpeg": "dynaudnorm=compress=27.0:gausssize=53" },
           { "ffmpeg": "speechnorm=channels=FC" },
+          { "ffmpeg": "dynaudnorm=compress=27.0:gausssize=53" },
           {
             "downmixStereo": {
               "center": 1.0,
@@ -100,7 +100,7 @@
       "default": true,
       "id": "1",
       "language": "eng",
-      "title": "Stereo 'dynaudnorm,speechnorm,downmix,loudnorm' (AAC)"
+      "title": "Stereo 'speechnorm,dynaudnorm,downmix,loudnorm' (AAC)"
     },
     {
       "extension": "ac3",
@@ -114,7 +114,7 @@
   ],
   "subs": [
     {
-      "extension": "filter.srt",
+      "extension": "srt",
       "filter": true,
       "sup2srt": true,
       "default": false,
