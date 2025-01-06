@@ -152,6 +152,7 @@ def mergeMKV(info):
         "0:" + info["video"]["title"],
         "--language",
         "0:" + info["video"]["language"],
+        "--no-chapters",
     ]
 
     if "mkvmergeOpts" in info["video"]:
@@ -167,6 +168,7 @@ def mergeMKV(info):
                 "0:" + track["language"],
                 "--default-track",
                 "0:" + str(int(track["default"])),
+                "--no-chapters",
                 getOutFile("audio", track),
             ]
 
