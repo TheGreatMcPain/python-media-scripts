@@ -125,10 +125,10 @@ def getffFilter(surVol: float, lfeVol: float, centerVol: float):
     lfeVolStr = "{}".format(lfeVol / 2)
     centerVolStr = "{}".format(centerVol / 2)
 
-    ffPanFilterL = "FL={c}*FC+{s}*FL+{s}*FLC+{s}*BL+{s}*SL+{l}*LFE".format(
+    ffPanFilterL = "FL<{c}*FC+{s}*FL+{s}*FLC+{s}*BL+{s}*SL+{l}*LFE".format(
         c=centerVolStr, s=surVolStr, l=lfeVolStr
     )
-    ffPanFilterR = "FR={c}*FC+{s}*FR+{s}*FRC+{s}*BR+{s}*SR+{l}*LFE".format(
+    ffPanFilterR = "FR<{c}*FC+{s}*FR+{s}*FRC+{s}*BR+{s}*SR+{l}*LFE".format(
         c=centerVolStr, s=surVolStr, l=lfeVolStr
     )
 
