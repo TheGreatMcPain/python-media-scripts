@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+#
+# Creates forced subtitles by comparing two BDNXML subtitles
+# and marking subs as forced where they overlap. This was very useful for the
+# Planet of the Apes reboot movies, where I wanted to burn in the sign language
+# subtitles, but didn't want any overlaps from the regular subtitles.
+#
 import sys
 import xml.etree.cElementTree as ET
 import string
