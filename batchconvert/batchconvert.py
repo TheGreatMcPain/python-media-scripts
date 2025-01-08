@@ -479,6 +479,88 @@ def subtitlesOCR(info):
                 srt.save()
 
 
+def convertAudio(sourceFile: str, audioTrack):
+    normalize: bool = False
+    encodeOpts = None
+    Filter: list = []
+    ffmpeg_normalize = FFmpegNormalize(
+        audio_codec=audioTrack["convert"]["codec"],
+        extra_output_options=encodeOpts,
+    )
+
+    if [] != audioTrack["convert"]["encodeOpts"]:
+        encodeOpts = audioTrack["convert"]["encodeOpts"]
+
+    for ffFilter in audioTrack["convert"]["filters"]:
+        if "ffmpeg" in ffFilter.keys():
+            Filter.append(ffFilter["ffmpeg"])
+
+        if "downmixStereo" in ffFilter.keys():
+            downmixAlgo = ffFilter["downmixStereo"]
+            Filter.append(
+                nightmode.getffFilter(
+                    surVol=downmixAlgo["surrounds"],
+                    lfeVol=downmixAlgo["lfe"],
+                    centerVol=downmixAlgo["center"],
+                )
+            )
+
+        if "normalize" in ffFilter.keys():
+            normalize = True
+            ffmpeg_normalize.pre_filter = ",".join(Filter)
+            Filter = []
+            if "keep" == ffFilter["normalize"]["loudness_range_target"]:
+                ffmpeg_normalize.keep_lra_above_loudness_range_target = True
+            else:
+                ffmpeg_normalize.loudness_range_target = ffFilter["normalize"][
+                    "loudness_range_target"
+                ]
+            ffmpeg_normalize.target_level = ffFilter["normalize"]["target_level"]
+            ffmpeg_normalize.true_peak = ffFilter["normalize"]["true_peak"]
+
+    if normalize:
+        ffmpeg_normalize.post_filter = ",".join(Filter)
+        normTemp = "audio-norm-temp-{}.flac".format(
+            hashlib.sha1(
+                json.dumps(audioTrack, sort_keys=True).encode("utf-8")
+            ).hexdigest()
+        )
+        # Creating a flac file, because it'll go faster than reading from the source.
+        # Plus, 'ffmpeg-normalize' doesn't have an option to just output one audio track.
+        print("'normalize' enabled! creating intermediate 'flac' file.")
+        nightmode.ffmpegAudio(
+            [
+                "ffmpeg",
+                "-y",
+                "-i",
+                sourceFile,
+                "-map",
+                "0:{}".format(audioTrack["id"]),
+                "-acodec",
+                "flac",
+                normTemp,
+            ],
+            sourceFile,
+            audioTrack["id"],
+        )
+        print("Normalizing and converting audio using 'ffmpeg-normalize'")
+        ffmpeg_normalize.add_media_file(normTemp, getOutFile("audio", audioTrack))
+        ffmpeg_normalize.run_normalization()
+        os.remove(normTemp)
+    else:
+        cmd = ["ffmpeg", "-y", "-i", sourceFile]
+        cmd += ["-map", "0:" + audioTrack["id"]]
+        cmd += ["-c:a", audioTrack["convert"]["codec"]]
+        if encodeOpts:
+            cmd += encodeOpts
+        if len(Filter) > 0:
+            cmd += ["-af", ",".join(Filter)]
+        cmd += [getOutFile("audio", audioTrack)]
+
+        print("Converting Audio via ffmpeg")
+        nightmode.ffmpegAudio(cmd, sourceFile, audioTrack["id"])
+
+
 def extractTracks(info):
     sourceFile = info["sourceFile"]
     if "audio" in info:
@@ -493,89 +575,7 @@ def extractTracks(info):
     if audio != 0:
         for track in audio:
             if track["convert"]:
-                normalize: bool = False
-                encodeOpts = None
-                Filter: list = []
-                ffmpeg_normalize = FFmpegNormalize(
-                    audio_codec=track["convert"]["codec"],
-                    extra_output_options=encodeOpts,
-                )
-
-                if [] != track["convert"]["encodeOpts"]:
-                    encodeOpts = track["convert"]["encodeOpts"]
-
-                for ffFilter in track["convert"]["filters"]:
-                    if "ffmpeg" in ffFilter.keys():
-                        Filter.append(ffFilter["ffmpeg"])
-
-                    if "downmixStereo" in ffFilter.keys():
-                        downmixAlgo = ffFilter["downmixStereo"]
-                        Filter.append(
-                            nightmode.getffFilter(
-                                surVol=downmixAlgo["surrounds"],
-                                lfeVol=downmixAlgo["lfe"],
-                                centerVol=downmixAlgo["center"],
-                            )
-                        )
-
-                    if "normalize" in ffFilter.keys():
-                        normalize = True
-                        ffmpeg_normalize.pre_filter = ",".join(Filter)
-                        Filter = []
-                        if "keep" == ffFilter["normalize"]["loudness_range_target"]:
-                            ffmpeg_normalize.keep_lra_above_loudness_range_target = True
-                        else:
-                            ffmpeg_normalize.loudness_range_target = ffFilter[
-                                "normalize"
-                            ]["loudness_range_target"]
-                        ffmpeg_normalize.target_level = ffFilter["normalize"][
-                            "target_level"
-                        ]
-                        ffmpeg_normalize.true_peak = ffFilter["normalize"]["true_peak"]
-
-                if normalize:
-                    ffmpeg_normalize.post_filter = ",".join(Filter)
-                    normTemp = "audio-norm-temp-{}.flac".format(
-                        hashlib.sha1(
-                            json.dumps(track, sort_keys=True).encode("utf-8")
-                        ).hexdigest()
-                    )
-                    # Creating a flac file, because it'll go faster than reading from the source.
-                    # Plus, 'ffmpeg-normalize' doesn't have an option to just output one audio track.
-                    print("'normalize' enabled! creating intermediate 'flac' file.")
-                    nightmode.ffmpegAudio(
-                        [
-                            "ffmpeg",
-                            "-y",
-                            "-i",
-                            sourceFile,
-                            "-map",
-                            "0:{}".format(track["id"]),
-                            "-acodec",
-                            "flac",
-                            normTemp,
-                        ],
-                        sourceFile,
-                        track["id"],
-                    )
-                    print("Normalizing and converting audio using 'ffmpeg-normalize'")
-                    ffmpeg_normalize.add_media_file(
-                        normTemp, getOutFile("audio", track)
-                    )
-                    ffmpeg_normalize.run_normalization()
-                    os.remove(normTemp)
-                else:
-                    cmd = ["ffmpeg", "-y", "-i", sourceFile]
-                    cmd += ["-map", "0:" + track["id"]]
-                    cmd += ["-c:a", track["convert"]["codec"]]
-                    if encodeOpts:
-                        cmd += encodeOpts
-                    if len(Filter) > 0:
-                        cmd += ["-af", ",".join(Filter)]
-                    cmd += [getOutFile("audio", track)]
-
-                    print("Converting Audio via ffmpeg")
-                    nightmode.ffmpegAudio(cmd, sourceFile, track["id"])
+                convertAudio(sourceFile, track)
 
     cmd = ["mkvextract", sourceFile, "tracks"]
     if audio != 0:
