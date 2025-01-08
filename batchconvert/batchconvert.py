@@ -114,10 +114,14 @@ def convertMKV(infoFile):
         print()
     if "extracted" == status:
         print()
-        encodeVideo(info)
-        status = writeResume("encoded")
+        convertAudio(info)
+        status = writeResume("audio")
+    if "audio" == status:
         print()
-    if "encoded" == status:
+        encodeVideo(info)
+        status = writeResume("video")
+        print()
+    if "video" == status:
         mergeMKV(info)
         os.rename(info["outputFile"], os.path.join("..", info["outputFile"]))
         status = writeResume("merged")
@@ -479,7 +483,7 @@ def subtitlesOCR(info):
                 srt.save()
 
 
-def convertAudio(sourceFile: str, audioTrack):
+def convertAudioTrack(sourceFile: str, audioTrack):
     normalize: bool = False
     encodeOpts = None
     Filter: list = []
@@ -561,6 +565,16 @@ def convertAudio(sourceFile: str, audioTrack):
         nightmode.ffmpegAudio(cmd, sourceFile, audioTrack["id"])
 
 
+def convertAudio(info):
+    if "audio" not in info:
+        return
+    audio = info["audio"]
+    sourceFile = info["sourceFile"]
+
+    for track in audio:
+        if track["convert"]:
+            convertAudioTrack(sourceFile, track)
+
 def extractTracks(info):
     sourceFile = info["sourceFile"]
     if "audio" in info:
@@ -571,11 +585,6 @@ def extractTracks(info):
         subs = info["subs"]
     else:
         subs = 0
-
-    if audio != 0:
-        for track in audio:
-            if track["convert"]:
-                convertAudio(sourceFile, track)
 
     cmd = ["mkvextract", sourceFile, "tracks"]
     if audio != 0:
