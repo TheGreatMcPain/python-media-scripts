@@ -71,8 +71,9 @@ def main():
                 infoPath = os.path.join(folder, INFOFILE)
                 info = getInfo(infoPath)
                 exclude.append(info["sourceFile"])
-                if "vapoursynthScript" in info["video"]:
-                    exclude.append(info["video"]["vapoursynthScript"])
+                if "vapoursynth" in info["video"]:
+                    if "script" in info["video"]["vapoursynth"]:
+                        exclude.append(info["video"]["vapoursynth"]["script"])
                 deleteList = list(set(os.listdir(folder)) - set(exclude))
                 for file in deleteList:
                     if os.path.isdir(file):
@@ -221,44 +222,42 @@ def encodeVideo(info):
 
     video = None
     # If a vapoursynth script is specified load it in as a module.
-    if (
-        "vapoursynthScript" in info["video"]
-        and info["video"]["vapoursynthScript"] != ""
-    ):
-        if not os.path.isfile(info["video"]["vapoursynthScript"]):
-            print("'{}' doesn't exist!".format(info["video"]["vapoursynthScript"]))
+    if "vapoursynth" in info["video"] and info["video"]["vapoursynth"]:
+        if "script" not in info["video"]["vapoursynth"]:
+            print("'script' variable missing from 'vapoursynth'!")
             exit(1)
+        vapoursynthScriptPath = info["video"]["vapoursynth"]["script"]
+
+        if not os.path.isfile(vapoursynthScriptPath):
+            print("'{}' doesn't exist!".format(vapoursynthScriptPath))
+            exit(1)
+
         vapoursynthScript_spec = importlib.util.spec_from_file_location(
-            "vapoursynthScript", info["video"]["vapoursynthScript"]
+            "vapoursynthScript", vapoursynthScriptPath
         )
-        # These checks for None suck!
         if not vapoursynthScript_spec:
-            print("Loading '{}' failed".format(info["video"]["vapoursynthScript"]))
+            print("Loading '{}' failed".format(vapoursynthScriptPath))
             exit(1)
+
         vapoursynthScript = importlib.util.module_from_spec(vapoursynthScript_spec)
-        # Like why?
         if not vapoursynthScript_spec.loader:
-            print(
-                "Failed to load '{}' as a module".format(
-                    info["video"]["vapoursynthScript"]
-                )
-            )
+            print("Failed to load '{}' as a module".format(vapoursynthScriptPath))
             exit(1)
+
         vapoursynthScript_spec.loader.exec_module(vapoursynthScript)
         if "vapoursynthFilter" in dir(vapoursynthScript):
-            video = vapoursynthScript.vapoursynthFilter(info["sourceFile"])
+            vsScriptVars = None
+            if "variables" in info["video"]["vapoursynth"]:
+                vsScriptVars = info["video"]["vapoursynth"]["variables"]
+            video = vapoursynthScript.vapoursynthFilter(info["sourceFile"], vsScriptVars)
         else:
             print(
                 "'vapoursynthFilter()' Doesn't exist in {}".format(
-                    info["video"]["vapoursynthScript"]
+                    vapoursynthScriptPath
                 )
             )
             exit(1)
-        print(
-            "Using 'vapoursynthFilter()' from '{}'".format(
-                info["video"]["vapoursynthScript"]
-            )
-        )
+        print("Using 'vapoursynthFilter()' from '{}'".format(vapoursynthScriptPath))
     else:
         video = vs.core.ffms2.Source(info["sourceFile"])
 

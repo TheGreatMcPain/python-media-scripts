@@ -19,7 +19,12 @@
       "--output-depth",
       "10"
     ],
-    "vapoursynthScript": "vapoursynth-filter.py",
+    "vapoursynth": {
+      "script": "vapoursynth-filter.py",
+      "variables": {
+        "coolValue": "yeet"
+      }
+    },
     "mkvmergeOpts": ["--aspect-ratio", "0:16/9"]
   },
   "audio": [
