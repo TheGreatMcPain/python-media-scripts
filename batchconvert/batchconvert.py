@@ -261,6 +261,9 @@ def encodeVideo(info):
                 )
             )
             exit(1)
+        if type(video) != vs.VideoNode:
+            print("'vapoursynthFilter()' did not return VideoNode.")
+            exit(1)
         print("Using 'vapoursynthFilter()' from '{}'".format(vapoursynthScriptPath))
     else:
         video = vs.core.ffms2.Source(info["sourceFile"])
@@ -495,32 +498,33 @@ def convertAudioTrack(sourceFile: str, audioTrack):
     if [] != audioTrack["convert"]["encodeOpts"]:
         encodeOpts = audioTrack["convert"]["encodeOpts"]
 
-    for ffFilter in audioTrack["convert"]["filters"]:
-        if "ffmpeg" in ffFilter.keys():
-            Filter.append(ffFilter["ffmpeg"])
+    if "filters" in audioTrack["convert"]:
+        for ffFilter in audioTrack["convert"]["filters"]:
+            if "ffmpeg" in ffFilter.keys():
+                Filter.append(ffFilter["ffmpeg"])
 
-        if "downmixStereo" in ffFilter.keys():
-            downmixAlgo = ffFilter["downmixStereo"]
-            Filter.append(
-                nightmode.getffFilter(
-                    surVol=downmixAlgo["surrounds"],
-                    lfeVol=downmixAlgo["lfe"],
-                    centerVol=downmixAlgo["center"],
+            if "downmixStereo" in ffFilter.keys():
+                downmixAlgo = ffFilter["downmixStereo"]
+                Filter.append(
+                    nightmode.getffFilter(
+                        surVol=downmixAlgo["surrounds"],
+                        lfeVol=downmixAlgo["lfe"],
+                        centerVol=downmixAlgo["center"],
+                    )
                 )
-            )
 
-        if "normalize" in ffFilter.keys():
-            normalize = True
-            ffmpeg_normalize.pre_filter = ",".join(Filter)
-            Filter = []
-            if "keep" == ffFilter["normalize"]["loudness_range_target"]:
-                ffmpeg_normalize.keep_lra_above_loudness_range_target = True
-            else:
-                ffmpeg_normalize.loudness_range_target = ffFilter["normalize"][
-                    "loudness_range_target"
-                ]
-            ffmpeg_normalize.target_level = ffFilter["normalize"]["target_level"]
-            ffmpeg_normalize.true_peak = ffFilter["normalize"]["true_peak"]
+            if "normalize" in ffFilter.keys():
+                normalize = True
+                ffmpeg_normalize.pre_filter = ",".join(Filter)
+                Filter = []
+                if "keep" == ffFilter["normalize"]["loudness_range_target"]:
+                    ffmpeg_normalize.keep_lra_above_loudness_range_target = True
+                else:
+                    ffmpeg_normalize.loudness_range_target = ffFilter["normalize"][
+                        "loudness_range_target"
+                    ]
+                ffmpeg_normalize.target_level = ffFilter["normalize"]["target_level"]
+                ffmpeg_normalize.true_peak = ffFilter["normalize"]["true_peak"]
 
     if normalize:
         ffmpeg_normalize.post_filter = ",".join(Filter)
