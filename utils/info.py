@@ -1,15 +1,30 @@
 #!/usr/bin/python3
 import pathlib
-from videoinfo import videoInfo
+import videoinfo
 import json
 import subprocess as sp
 
 
 class Info:
-    def __init__(self, sourceMKV: str):
-        self.sourceMKV = sourceMKV
-        self.videoInfo = videoInfo(sourceMKV)
-        self.ffprobeInfo = dict(
+    def __init__(self, jsonFile=None, sourceMKV = None):
+        self.Data = None
+        if jsonFile:
+            with open(jsonFile, "r") as f:
+                self.Data = json.load(f)
+        elif sourceMKV:
+            self.Data = self.generateTemplate(sourceMKV)
+
+    def __str__(self):
+        return json.dumps(self.Data)
+
+    def __dir__(self):
+        if self.Data:
+            return self.Data
+        return {}
+
+
+    def generateTemplate(self, sourceMKV: str) -> dict:
+        ffprobeInfo = dict(
             json.loads(
                 sp.check_output(
                     (
@@ -29,23 +44,21 @@ class Info:
                 )
             )
         )
-
-    def generateTemplate(self) -> dict:
         output = {}
-        output["sourceFile"] = self.sourceMKV
+        output["sourceFile"] = sourceMKV
         output["title"] = "Insert Title Here"
         output["outputFile"] = "Insert Name Here.mkv"
 
-        output["video"] = self.getVideoTemplate()
+        output["video"] = self.getVideoTemplate(ffprobeInfo, sourceMKV)
         audio = []
         subs = []
 
-        for i in range(len(self.ffprobeInfo["streams"])):
-            template = self.getAudioTemplate(i)
+        for i in range(len(ffprobeInfo["streams"])):
+            template = self.getAudioTemplate(ffprobeInfo, i)
             if template != {}:
                 audio.append(template)
-        for i in range(len(self.ffprobeInfo["streams"])):
-            template = self.getSubtitleTemplate(i)
+        for i in range(len(ffprobeInfo["streams"])):
+            template = self.getSubtitleTemplate(ffprobeInfo, i)
             if template != {}:
                 subs.append(template)
 
@@ -56,18 +69,19 @@ class Info:
 
         return output
 
-    def getVideoTemplate(self) -> dict:
+    def getVideoTemplate(self, ffInfo: dict, inFile: str) -> dict:
+        videoInfo = videoinfo.videoInfo(inFile)
         output = {}
 
         title = "{}x{}p{} ".format(
-            self.videoInfo.Width, self.videoInfo.Height, self.videoInfo.FPS
+            videoInfo.Width, videoInfo.Height, videoInfo.FPS
         )
         hdrSpec = []
-        if self.videoInfo.DolbyVision:
+        if videoInfo.DolbyVision:
             hdrSpec.append("DV")
-        if self.videoInfo.HDR10Plus:
+        if videoInfo.HDR10Plus:
             hdrSpec.append("HDR10+")
-        elif self.videoInfo.HDR10:
+        elif videoInfo.HDR10:
             hdrSpec.append("HDR10")
         title += "/".join(hdrSpec)
 
@@ -75,8 +89,8 @@ class Info:
         output["title"] = title + " (HEVC)"
 
         output["language"] = "und"
-        if "tags" in self.ffprobeInfo["streams"][0]:
-            tags = self.ffprobeInfo["streams"][0]["tags"]
+        if "tags" in ffInfo["streams"][0]:
+            tags = ffInfo["streams"][0]["tags"]
             if "language" in tags:
                 output["language"] = tags["language"]
 
@@ -100,18 +114,18 @@ class Info:
         }
 
         mkvmergeOpts = []
-        if "display_aspect_ratio" in self.ffprobeInfo["streams"][0]:
-            aspectRatio = self.ffprobeInfo["streams"][0]["display_aspect_ratio"]
+        if "display_aspect_ratio" in ffInfo["streams"][0]:
+            aspectRatio = ffInfo["streams"][0]["display_aspect_ratio"]
             aspectRatio = aspectRatio.replace(":", "/")
             mkvmergeOpts = ["--aspect-ratio", "0:{}".format(aspectRatio)]
         output["mkvmergeOpts"] = mkvmergeOpts
 
         return output
 
-    def getAudioTemplate(self, trackid: int) -> dict:
-        if self.ffprobeInfo["streams"][trackid]["codec_type"] not in "audio":
+    def getAudioTemplate(self, ffInfo: dict, trackid: int) -> dict:
+        if ffInfo["streams"][trackid]["codec_type"] not in "audio":
             return {}
-        streamInfo = self.ffprobeInfo["streams"][trackid]
+        streamInfo = ffInfo["streams"][trackid]
 
         output = {}
 
@@ -159,10 +173,10 @@ class Info:
 
         return output
 
-    def getSubtitleTemplate(self, trackid: int) -> dict:
-        if self.ffprobeInfo["streams"][trackid]["codec_type"].lower() not in "subtitle":
+    def getSubtitleTemplate(self, ffInfo, trackid: int) -> dict:
+        if ffInfo["streams"][trackid]["codec_type"].lower() not in "subtitle":
             return {}
-        streamInfo = self.ffprobeInfo["streams"][trackid]
+        streamInfo = ffInfo["streams"][trackid]
 
         output = {}
         if streamInfo["codec_name"].lower() in "hdmv_pgs_subtitle":
@@ -191,9 +205,7 @@ class Info:
 if __name__ == "__main__":
     import sys
 
-    test = Info(sys.argv[1])
-    print(json.dumps(test.ffprobeInfo["streams"], indent=2))
-
-    print(json.dumps(test.generateTemplate(), indent=2))
+    test = Info(sourceMKV=sys.argv[1])
+    print(test)
     # for i in range(len(test.ffprobeInfo["streams"])):
     #    print(json.dumps(test.getAudioTemplate(i), indent=2))
