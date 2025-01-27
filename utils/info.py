@@ -7,6 +7,7 @@ import subprocess as sp
 
 class Info:
     def __init__(self, sourceMKV: str):
+        self.sourceMKV = sourceMKV
         self.videoInfo = videoInfo(sourceMKV)
         self.ffprobeInfo = dict(
             json.loads(
@@ -28,6 +29,32 @@ class Info:
                 )
             )
         )
+
+    def generateTemplate(self) -> dict:
+        output = {}
+        output["sourceFile"] = self.sourceMKV
+        output["title"] = "Insert Title Here"
+        output["outputFile"] = "Insert Name Here.mkv"
+
+        output["video"] = self.getVideoTemplate()
+        audio = []
+        subs = []
+
+        for i in range(len(self.ffprobeInfo["streams"])):
+            template = self.getAudioTemplate(i)
+            if template != {}:
+                audio.append(template)
+        for i in range(len(self.ffprobeInfo["streams"])):
+            template = self.getSubtitleTemplate(i)
+            if template != {}:
+                subs.append(template)
+
+        if len(audio) > 0:
+            output["audio"] = audio
+        if len(subs) > 0:
+            output["subs"] = subs
+
+        return output
 
     def getVideoTemplate(self) -> dict:
         output = {}
@@ -167,6 +194,6 @@ if __name__ == "__main__":
     test = Info(sys.argv[1])
     print(json.dumps(test.ffprobeInfo["streams"], indent=2))
 
-    print(json.dumps(test.getVideoTemplate(), indent=2))
+    print(json.dumps(test.generateTemplate(), indent=2))
     # for i in range(len(test.ffprobeInfo["streams"])):
     #    print(json.dumps(test.getAudioTemplate(i), indent=2))
