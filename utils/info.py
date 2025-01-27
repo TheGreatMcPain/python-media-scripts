@@ -1,11 +1,13 @@
 #!/usr/bin/python3
 import pathlib
+from videoinfo import videoInfo
 import json
 import subprocess as sp
 
 
 class Info:
     def __init__(self, sourceMKV: str):
+        self.videoInfo = videoInfo(sourceMKV)
         self.ffprobeInfo = dict(
             json.loads(
                 sp.check_output(
@@ -26,6 +28,58 @@ class Info:
                 )
             )
         )
+
+    def getVideoTemplate(self) -> dict:
+        output = {}
+
+        title = "{}x{}p{} ".format(
+            self.videoInfo.Width, self.videoInfo.Height, self.videoInfo.FPS
+        )
+        hdrSpec = []
+        if self.videoInfo.DolbyVision:
+            hdrSpec.append("DV")
+        if self.videoInfo.HDR10Plus:
+            hdrSpec.append("HDR10+")
+        elif self.videoInfo.HDR10:
+            hdrSpec.append("HDR10")
+        title += "/".join(hdrSpec)
+
+        # We are always using HEVC anyways.
+        output["title"] = title + " (HEVC)"
+
+        output["language"] = "und"
+        if "tags" in self.ffprobeInfo["streams"][0]:
+            tags = self.ffprobeInfo["streams"][0]["tags"]
+            if "language" in tags:
+                output["language"] = tags["language"]
+
+        output["output"] = "video.hevc"
+        output["convert"] = True
+        output["x265Opts"] = [
+            "--preset",
+            "medium",
+            "--crf",
+            "16",
+            "--qcomp",
+            "0.75",
+            "--tune",
+            "grain",
+            "--output-depth",
+            "10",
+        ]
+        output["vapoursynth"] = {
+            "script": "vapoursynth-filter.py",
+            "variables": {"coolValue": "yeet"},
+        }
+
+        mkvmergeOpts = []
+        if "display_aspect_ratio" in self.ffprobeInfo["streams"][0]:
+            aspectRatio = self.ffprobeInfo["streams"][0]["display_aspect_ratio"]
+            aspectRatio = aspectRatio.replace(":", "/")
+            mkvmergeOpts = ["--aspect-ratio", "0:{}".format(aspectRatio)]
+        output["mkvmergeOpts"] = mkvmergeOpts
+
+        return output
 
     def getAudioTemplate(self, trackid: int) -> dict:
         if self.ffprobeInfo["streams"][trackid]["codec_type"] not in "audio":
@@ -113,5 +167,6 @@ if __name__ == "__main__":
     test = Info(sys.argv[1])
     print(json.dumps(test.ffprobeInfo["streams"], indent=2))
 
+    print(json.dumps(test.getVideoTemplate(), indent=2))
     # for i in range(len(test.ffprobeInfo["streams"])):
     #    print(json.dumps(test.getAudioTemplate(i), indent=2))
