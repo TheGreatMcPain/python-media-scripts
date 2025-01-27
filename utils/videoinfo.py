@@ -9,6 +9,7 @@ import json
 import subprocess as sp
 import sys
 import shutil
+import math
 
 
 class videoInfo:
@@ -33,6 +34,11 @@ class videoInfo:
     ColorTransfer = None
     ColorPrimaries = None
     ColorRange = None
+
+    # Other Useful values
+    Height = None
+    Width = None
+    FPS = None
 
     DoviTool = "dovi_tool"
     HDR10PlusTool = "hdr10plus_tool"
@@ -79,6 +85,15 @@ class videoInfo:
                         self.ColorRange = "limited"
                     else:
                         self.ColorRange = "full"
+
+                if not self.Width and "width" in stream:
+                    self.Width = stream["width"]
+                if not self.Height and "height" in stream:
+                    self.Height = stream["height"]
+                if not self.FPS and "r_frame_rate" in stream:
+                    self.FPS = math.ceil(eval(stream["r_frame_rate"]))
+                if not self.FPS and "avg_frame_rate" in stream:
+                    self.FPS = math.ceil(eval(stream["avg_frame_rate"]))
 
                 sideDataList = self.__getFrameSideDataList(stream)
 
