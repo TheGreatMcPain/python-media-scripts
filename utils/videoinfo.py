@@ -133,7 +133,7 @@ class videoInfo:
                 "0:0",
                 "-c:v",
                 "copy",
-                "-vbsf",
+                "-bsf:v",
                 "hevc_mp4toannexb",
                 "-f",
                 "hevc",
