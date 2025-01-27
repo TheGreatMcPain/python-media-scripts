@@ -174,12 +174,12 @@ def mergeMKV(info):
                 "--default-track",
                 "0:" + str(int(track["default"])),
                 "--no-chapters",
-                getOutFile("audio", track),
+                getOutFile("audio", info["audio"], track),
             ]
 
     if "subs" in info:
         for track in info["subs"]:
-            supFile = getOutFile("subtitles", track)
+            supFile = getOutFile("subtitles", info["subs"], track)
 
             if "external" in track:
                 supFile = track["external"]
@@ -386,14 +386,14 @@ def prepForcedSubs(info):
         cmd = BDSUP2SUB + [
             "--forced-only",
             "--output",
-            getOutFile("subtitles-forced", track),
-            getOutFile("subtitles", track),
+            getOutFile("subtitles-forced", subs, track),
+            getOutFile("subtitles", subs, track),
         ]
         p = sp.Popen(cmd, stdout=sp.DEVNULL, stderr=sp.DEVNULL)
         p.communicate()
-        print("Checking if '" + getOutFile("subtitles", track) + "' has forced subs")
-        if os.path.isfile(getOutFile("subtitles-forced", track)):
-            sourceFile = getOutFile("subtitles", track)
+        print("Checking if '" + getOutFile("subtitles", subs, track) + "' has forced subs")
+        if os.path.isfile(getOutFile("subtitles-forced", subs, track)):
+            sourceFile = getOutFile("subtitles", subs, track)
             os.mkdir("subtitles")
             os.chdir("subtitles")
             cmd = BDSUP2SUB + [
@@ -468,8 +468,8 @@ def subtitlesOCR(info):
                 "-l",
                 track["language"],
                 "-o",
-                getOutFile("subtitles", track),
-                getOutFile("subtitles", sourceTrack),
+                getOutFile("subtitles", subs, track),
+                getOutFile("subtitles", subs, sourceTrack),
             ]
 
             print("\nCreating SRT of track {} via sup2srt.".format(track["id"]))
@@ -481,12 +481,12 @@ def subtitlesOCR(info):
                 continue
             if track["filter"]:
                 print("Creating non-SDH subtitles.")
-                srt = Subtitles(getOutFile("subtitles", track))
+                srt = Subtitles(getOutFile("subtitles", subs, track))
                 srt.filter()
                 srt.save()
 
 
-def convertAudioTrack(sourceFile: str, audioTrack):
+def convertAudioTrack(sourceFile: str, info: list, audioTrack):
     normalize: bool = False
     encodeOpts = None
     Filter: list = []
@@ -552,7 +552,7 @@ def convertAudioTrack(sourceFile: str, audioTrack):
             audioTrack["id"],
         )
         print("Normalizing and converting audio using 'ffmpeg-normalize'")
-        ffmpeg_normalize.add_media_file(normTemp, getOutFile("audio", audioTrack))
+        ffmpeg_normalize.add_media_file(normTemp, getOutFile("audio", info, audioTrack))
         ffmpeg_normalize.run_normalization()
         os.remove(normTemp)
     else:
@@ -563,7 +563,7 @@ def convertAudioTrack(sourceFile: str, audioTrack):
             cmd += encodeOpts
         if len(Filter) > 0:
             cmd += ["-af", ",".join(Filter)]
-        cmd += [getOutFile("audio", audioTrack)]
+        cmd += [getOutFile("audio", info, audioTrack)]
 
         print("Converting Audio via ffmpeg")
         nightmode.ffmpegAudio(cmd, sourceFile, audioTrack["id"])
@@ -577,7 +577,7 @@ def convertAudio(info):
 
     for track in audio:
         if track["convert"]:
-            convertAudioTrack(sourceFile, track)
+            convertAudioTrack(sourceFile, audio, track)
 
 def extractTracks(info):
     sourceFile = info["sourceFile"]
@@ -594,7 +594,7 @@ def extractTracks(info):
     if audio != 0:
         for track in audio:
             if not track["convert"]:
-                cmd += [track["id"] + ":" + getOutFile("audio", track)]
+                cmd += [track["id"] + ":" + getOutFile("audio", audio, track)]
 
     if subs != 0:
         for track in subs:
@@ -603,7 +603,7 @@ def extractTracks(info):
                     continue
             if "external" in track:
                 continue
-            cmd += [track["id"] + ":" + getOutFile("subtitles", track)]
+            cmd += [track["id"] + ":" + getOutFile("subtitles", subs, track)]
 
     cmd += ["chapters", "chapters.xml"]
 
@@ -623,13 +623,11 @@ def getInfo(infoFile):
     return info
 
 
-def getOutFile(base: str, track: dict):
+def getOutFile(base: str, tracks: list, track: dict):
     ext = track["extension"]
     trackId = track["id"]
-    trackHash = hashlib.sha1(
-        json.dumps(track, sort_keys=True).encode("utf-8")
-    ).hexdigest()
-    return "{}-{}-{}.{}".format(base, trackId, trackHash, ext)
+    trackNum = tracks.index(track)
+    return "{}-{}-{}.{}".format(base, trackId, trackNum, ext)
 
 
 # Based on this: https://code-examples.net/en/q/1ba5e27
