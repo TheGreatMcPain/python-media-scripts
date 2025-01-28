@@ -1,27 +1,39 @@
 #!/usr/bin/python3
-import pathlib
 import videoinfo
 import json
 import subprocess as sp
 
 
 class Info:
-    def __init__(self, jsonFile=None, sourceMKV = None):
-        self.Data = None
+    def __init__(self, jsonFile=None, sourceMKV=None):
+        self.Data = {}
         if jsonFile:
             with open(jsonFile, "r") as f:
                 self.Data = json.load(f)
         elif sourceMKV:
             self.Data = self.generateTemplate(sourceMKV)
 
+        if "audio" in self.Data and "subs" in self.Data:
+            for i in range(len(self.Data["audio"])):
+                x = self.Data["audio"]
+                x["index"] = i
+            for i in range(len(self.Data["subs"])):
+                x = self.Data["subs"]
+                x["index"] = i
+
     def __str__(self):
         return json.dumps(self.Data)
 
-    def __dir__(self):
-        if self.Data:
-            return self.Data
-        return {}
+    def __contains__(self, value) -> bool:
+        return value in self.Data
 
+    def __getitem__(self, value: str):
+        return self.Data[value]
+
+    def getOutFile(self, base: str, track: dict):
+        return "{}-{}-{}.{}".format(
+            base, track["trackid"], track["index"], track["extension"]
+        )
 
     def generateTemplate(self, sourceMKV: str) -> dict:
         ffprobeInfo = dict(
@@ -73,9 +85,7 @@ class Info:
         videoInfo = videoinfo.videoInfo(inFile)
         output = {}
 
-        title = "{}x{}p{} ".format(
-            videoInfo.Width, videoInfo.Height, videoInfo.FPS
-        )
+        title = "{}x{}p{} ".format(videoInfo.Width, videoInfo.Height, videoInfo.FPS)
         hdrSpec = []
         if videoInfo.DolbyVision:
             hdrSpec.append("DV")
