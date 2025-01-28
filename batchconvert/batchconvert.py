@@ -17,6 +17,7 @@ from subtitle_filter import Subtitles
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from utils import videoinfo
 from utils import nightmode
+from utils.info import Info
 
 import psutil  # Comment out of not using psutil
 
@@ -69,7 +70,7 @@ def main():
             print("\nCleaning temp files")
             for folder in folders:
                 infoPath = os.path.join(folder, INFOFILE)
-                info = getInfo(infoPath)
+                info = Info(jsonFile=infoPath)
                 exclude.append(info["sourceFile"])
                 if "vapoursynth" in info["video"]:
                     if "script" in info["video"]["vapoursynth"]:
@@ -100,7 +101,7 @@ def convertMKV(infoFile):
     else:
         status = "juststarted"
 
-    info = getInfo(infoFile)
+    info = Info(jsonFile=infoFile)
 
     if not os.path.isfile(info["sourceFile"]):
         print("'{}' not found! skipping".format(info["sourceFile"]))
@@ -174,12 +175,12 @@ def mergeMKV(info):
                 "--default-track",
                 "0:" + str(int(track["default"])),
                 "--no-chapters",
-                getOutFile("audio", info["audio"], track),
+                info.getOutFile("audio", info["audio"], track),
             ]
 
     if "subs" in info:
         for track in info["subs"]:
-            supFile = getOutFile("subtitles", info["subs"], track)
+            supFile = info.getOutFile("subtitles", info["subs"], track)
 
             if "external" in track:
                 supFile = track["external"]
@@ -368,7 +369,7 @@ def encodeVideo(info):
         exit(0)
 
 
-def prepForcedSubs(info):
+def prepForcedSubs(info: Info):
     if "subs" in info:
         subs = info["subs"]
     else:
@@ -386,14 +387,14 @@ def prepForcedSubs(info):
         cmd = BDSUP2SUB + [
             "--forced-only",
             "--output",
-            getOutFile("subtitles-forced", subs, track),
-            getOutFile("subtitles", subs, track),
+            info.getOutFile("subtitles-forced", track),
+            info.getOutFile("subtitles", track),
         ]
         p = sp.Popen(cmd, stdout=sp.DEVNULL, stderr=sp.DEVNULL)
         p.communicate()
-        print("Checking if '" + getOutFile("subtitles", subs, track) + "' has forced subs")
-        if os.path.isfile(getOutFile("subtitles-forced", subs, track)):
-            sourceFile = getOutFile("subtitles", subs, track)
+        print("Checking if '" + info.getOutFile("subtitles", track) + "' has forced subs")
+        if os.path.isfile(info.getOutFile("subtitles-forced", track)):
+            sourceFile = info.getOutFile("subtitles", track)
             os.mkdir("subtitles")
             os.chdir("subtitles")
             cmd = BDSUP2SUB + [
@@ -437,7 +438,7 @@ def prepForcedSubs(info):
             os.remove("subtitles-temp.sup")
 
 
-def subtitlesOCR(info):
+def subtitlesOCR(info: Info):
     subs = None
     if "subs" in info:
         subs = info["subs"]
@@ -468,8 +469,8 @@ def subtitlesOCR(info):
                 "-l",
                 track["language"],
                 "-o",
-                getOutFile("subtitles", subs, track),
-                getOutFile("subtitles", subs, sourceTrack),
+                info.getOutFile("subtitles", track),
+                info.getOutFile("subtitles", sourceTrack),
             ]
 
             print("\nCreating SRT of track {} via sup2srt.".format(track["id"]))
@@ -481,12 +482,12 @@ def subtitlesOCR(info):
                 continue
             if track["filter"]:
                 print("Creating non-SDH subtitles.")
-                srt = Subtitles(getOutFile("subtitles", subs, track))
+                srt = Subtitles(info.getOutFile("subtitles", track))
                 srt.filter()
                 srt.save()
 
 
-def convertAudioTrack(sourceFile: str, info: list, audioTrack):
+def convertAudioTrack(sourceFile: str, info: Info, audioTrack):
     normalize: bool = False
     encodeOpts = None
     Filter: list = []
@@ -552,7 +553,7 @@ def convertAudioTrack(sourceFile: str, info: list, audioTrack):
             audioTrack["id"],
         )
         print("Normalizing and converting audio using 'ffmpeg-normalize'")
-        ffmpeg_normalize.add_media_file(normTemp, getOutFile("audio", info, audioTrack))
+        ffmpeg_normalize.add_media_file(normTemp, info.getOutFile("audio", audioTrack))
         ffmpeg_normalize.run_normalization()
         os.remove(normTemp)
     else:
@@ -563,13 +564,13 @@ def convertAudioTrack(sourceFile: str, info: list, audioTrack):
             cmd += encodeOpts
         if len(Filter) > 0:
             cmd += ["-af", ",".join(Filter)]
-        cmd += [getOutFile("audio", info, audioTrack)]
+        cmd += [info.getOutFile("audio", audioTrack)]
 
         print("Converting Audio via ffmpeg")
         nightmode.ffmpegAudio(cmd, sourceFile, audioTrack["id"])
 
 
-def convertAudio(info):
+def convertAudio(info: Info):
     if "audio" not in info:
         return
     audio = info["audio"]
@@ -594,7 +595,7 @@ def extractTracks(info):
     if audio != 0:
         for track in audio:
             if not track["convert"]:
-                cmd += [track["id"] + ":" + getOutFile("audio", audio, track)]
+                cmd += [track["id"] + ":" + info.getOutFile("audio", track)]
 
     if subs != 0:
         for track in subs:
@@ -603,7 +604,7 @@ def extractTracks(info):
                     continue
             if "external" in track:
                 continue
-            cmd += [track["id"] + ":" + getOutFile("subtitles", subs, track)]
+            cmd += [track["id"] + ":" + info.getOutFile("subtitles", track)]
 
     cmd += ["chapters", "chapters.xml"]
 
@@ -611,23 +612,6 @@ def extractTracks(info):
     print(" ".join(cmd))
     p = sp.Popen(cmd)
     p.communicate()
-
-
-def getInfo(infoFile):
-    try:
-        info = json.load(open(infoFile, "r"))
-    except IOError:
-        print("Error:", infoFile, "not found.")
-        exit(1)
-
-    return info
-
-
-def getOutFile(base: str, tracks: list, track: dict):
-    ext = track["extension"]
-    trackId = track["id"]
-    trackNum = tracks.index(track)
-    return "{}-{}-{}.{}".format(base, trackId, trackNum, ext)
 
 
 # Based on this: https://code-examples.net/en/q/1ba5e27
