@@ -167,6 +167,11 @@ def mergeMKV(info):
 
     if "audio" in info:
         for track in info["audio"]:
+            if "sync" in track:
+                cmd += [
+                    "--sync",
+                    "0:" + str(int(track["sync"]))
+                ]
             cmd += [
                 "--track-name",
                 "0:" + track["title"],
