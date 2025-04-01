@@ -385,7 +385,7 @@ def prepForcedSubs(info: Info):
             print("Not checking external subtitles for forced subs.")
             return 0
 
-        if not os.path.isfile("subtitles-" + track["id"] + ".sup"):
+        if not info.getOutFile("subtitle", track):
             print("Subtitles doesn't exist!")
             return 0
 
