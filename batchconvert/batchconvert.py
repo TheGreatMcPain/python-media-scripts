@@ -168,10 +168,7 @@ def mergeMKV(info):
     if "audio" in info:
         for track in info["audio"]:
             if "sync" in track:
-                cmd += [
-                    "--sync",
-                    "0:" + str(int(track["sync"]))
-                ]
+                cmd += ["--sync", "0:" + str(int(track["sync"]))]
             cmd += [
                 "--track-name",
                 "0:" + track["title"],
@@ -259,7 +256,9 @@ def encodeVideo(info):
             vsScriptVars = None
             if "variables" in info["video"]["vapoursynth"]:
                 vsScriptVars = info["video"]["vapoursynth"]["variables"]
-            video = vapoursynthScript.vapoursynthFilter(info["sourceFile"], vsScriptVars)
+            video = vapoursynthScript.vapoursynthFilter(
+                info["sourceFile"], vsScriptVars
+            )
         else:
             print(
                 "'vapoursynthFilter()' Doesn't exist in {}".format(
@@ -397,7 +396,9 @@ def prepForcedSubs(info: Info):
         ]
         p = sp.Popen(cmd, stdout=sp.DEVNULL, stderr=sp.DEVNULL)
         p.communicate()
-        print("Checking if '" + info.getOutFile("subtitles", track) + "' has forced subs")
+        print(
+            "Checking if '" + info.getOutFile("subtitles", track) + "' has forced subs"
+        )
         if os.path.isfile(info.getOutFile("subtitles-forced", track)):
             sourceFile = info.getOutFile("subtitles", track)
             os.mkdir("subtitles")
@@ -530,7 +531,8 @@ def convertAudioTrack(sourceFile: str, info: Info, audioTrack):
                         "loudness_range_target"
                     ]
                 ffmpeg_normalize.target_level = ffFilter["normalize"]["target_level"]
-                ffmpeg_normalize.true_peak = ffFilter["normalize"]["true_peak"]
+                if "true_peak" in ffFilter["normalize"]:
+                    ffmpeg_normalize.true_peak = ffFilter["normalize"]["true_peak"]
 
     if normalize:
         ffmpeg_normalize.post_filter = ",".join(Filter)
@@ -583,7 +585,8 @@ def convertAudio(info: Info):
 
     for track in audio:
         if track["convert"]:
-            convertAudioTrack(sourceFile, audio, track)
+            convertAudioTrack(sourceFile, info, track)
+
 
 def extractTracks(info):
     sourceFile = info["sourceFile"]

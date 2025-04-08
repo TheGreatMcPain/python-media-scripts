@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-import videoinfo
+from utils import videoinfo
 import json
 import subprocess as sp
 
@@ -15,10 +15,10 @@ class Info:
 
         if "audio" in self.Data and "subs" in self.Data:
             for i in range(len(self.Data["audio"])):
-                x = self.Data["audio"]
+                x = self.Data["audio"][i]
                 x["index"] = i
             for i in range(len(self.Data["subs"])):
-                x = self.Data["subs"]
+                x = self.Data["subs"][i]
                 x["index"] = i
 
     def __str__(self):
@@ -32,7 +32,7 @@ class Info:
 
     def getOutFile(self, base: str, track: dict):
         return "{}-{}-{}.{}".format(
-            base, track["trackid"], track["index"], track["extension"]
+            base, track["id"], track["index"], track["extension"]
         )
 
     def generateTemplate(self, sourceMKV: str) -> dict:
