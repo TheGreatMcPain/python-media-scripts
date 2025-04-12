@@ -460,10 +460,10 @@ def subtitlesOCR(info: Info):
         if track["sup2srt"]:
             sourceTrack = None
             for x in subs:
-                if "sup2srt" not in x and x["id"] == track["id"]:
+                if "sup2srt" not in x and x["id"] == str(track["id"]):
                     sourceTrack = x
                     break
-                if not x["sup2srt"] and x["id"] == track["id"]:
+                if not x["sup2srt"] and x["id"] == str(track["id"]):
                     sourceTrack = x
                     break
             if not sourceTrack:
@@ -565,7 +565,7 @@ def convertAudioTrack(sourceFile: str, info: Info, audioTrack):
         os.remove(normTemp)
     else:
         cmd = ["ffmpeg", "-y", "-i", sourceFile]
-        cmd += ["-map", "0:" + audioTrack["id"]]
+        cmd += ["-map", "0:{}".format(audioTrack["id"])]
         cmd += ["-c:a", audioTrack["convert"]["codec"]]
         if encodeOpts:
             cmd += encodeOpts
@@ -603,7 +603,7 @@ def extractTracks(info):
     if audio != 0:
         for track in audio:
             if not track["convert"]:
-                cmd += [track["id"] + ":" + info.getOutFile("audio", track)]
+                cmd += ["{}:".format(track["id"]) + info.getOutFile("audio", track)]
 
     if subs != 0:
         for track in subs:
@@ -612,7 +612,7 @@ def extractTracks(info):
                     continue
             if "external" in track:
                 continue
-            cmd += [track["id"] + ":" + info.getOutFile("subtitles", track)]
+            cmd += ["{}:".format(track["id"]) + info.getOutFile("subtitles", track)]
 
     cmd += ["chapters", "chapters.xml"]
 
