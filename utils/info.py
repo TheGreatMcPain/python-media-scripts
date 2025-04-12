@@ -26,7 +26,7 @@ class Info:
                 x["index"] = i
 
     def __str__(self):
-        return json.dumps(self.Data)
+        return json.dumps(self.Data, indent=2)
 
     def __contains__(self, value) -> bool:
         return value in self.Data
@@ -63,6 +63,9 @@ class Info:
         output = {}
         output["sourceFile"] = sourceMKV
         output["title"] = "Insert Title Here"
+        if "tags" in ffprobeInfo["format"]:
+            if "title" in ffprobeInfo["format"]["tags"]:
+                output["title"] = ffprobeInfo["format"]["tags"]["title"]
         output["outputFile"] = "Insert Name Here.mkv"
 
         output["video"] = self.getVideoTemplate(ffprobeInfo, sourceMKV)
@@ -221,7 +224,4 @@ class Info:
 if __name__ == "__main__":
     import sys
 
-    test = Info(sourceMKV=sys.argv[1])
-    print(test)
-    # for i in range(len(test.ffprobeInfo["streams"])):
-    #    print(json.dumps(test.getAudioTemplate(i), indent=2))
+    print(Info(sourceMKV=sys.argv[1]))
