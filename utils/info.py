@@ -17,10 +17,11 @@ class Info:
         elif sourceMKV:
             self.Data = self.generateTemplate(sourceMKV)
 
-        if "audio" in self.Data and "subs" in self.Data:
+        if "audio" in self.Data:
             for i in range(len(self.Data["audio"])):
                 x = self.Data["audio"][i]
                 x["index"] = i
+        if "subs" in self.Data:
             for i in range(len(self.Data["subs"])):
                 x = self.Data["subs"][i]
                 x["index"] = i
