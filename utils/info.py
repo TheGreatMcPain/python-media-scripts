@@ -1,7 +1,11 @@
 #!/usr/bin/python3
-from utils import videoinfo
 import json
 import subprocess as sp
+
+try:
+    import videoinfo
+except:
+    from utils import videoinfo
 
 
 class Info:
