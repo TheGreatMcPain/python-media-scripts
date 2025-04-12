@@ -288,14 +288,22 @@ class videoInfo:
                 self.HDR10MasterDisplayData["white_point_y"], 50000
             ),
         )
-        masterDisplayString += "L({},{})".format(
-            self.__getMasterDisplayColorValue(
-                self.HDR10MasterDisplayData["min_luminance"], 10000
-            ),
-            self.__getMasterDisplayColorValue(
-                self.HDR10MasterDisplayData["max_luminance"], 10000
-            ),
-        )
+        # I guess some x265 encoded files don't include these values.
+        # I'm guessing "L(10000000,1)" is the default.
+        if (
+            "min_luminance" in self.HDR10MasterDisplayData
+            and "max_luminance" in self.HDR10MasterDisplayData
+        ):
+            masterDisplayString += "L({},{})".format(
+                self.__getMasterDisplayColorValue(
+                    self.HDR10MasterDisplayData["min_luminance"], 10000
+                ),
+                self.__getMasterDisplayColorValue(
+                    self.HDR10MasterDisplayData["max_luminance"], 10000
+                ),
+            )
+        else:
+            masterDisplayString += "L(10000000,1)"
 
         return masterDisplayString
 
