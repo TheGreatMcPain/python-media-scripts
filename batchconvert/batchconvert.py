@@ -177,12 +177,12 @@ def mergeMKV(info):
                 "--default-track",
                 "0:" + str(int(track["default"])),
                 "--no-chapters",
-                info.getOutFile("audio", info["audio"], track),
+                info.getOutFile("audio", track),
             ]
 
     if "subs" in info:
         for track in info["subs"]:
-            supFile = info.getOutFile("subtitles", info["subs"], track)
+            supFile = info.getOutFile("subtitles", track)
 
             if "external" in track:
                 supFile = track["external"]
