@@ -168,7 +168,9 @@ class Info:
             output["language"] = streamInfo["tags"]["language"]
 
         output["title"] = ""
-        if streamInfo["channel_layout"].lower() in "stereo":
+        if streamInfo["channels"] == 1:
+            output["title"] = "Mono "
+        elif streamInfo["channels"] == 2:
             output["title"] = "Stereo "
         else:
             output["title"] = streamInfo["channel_layout"][:3] + " "
