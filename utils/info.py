@@ -1,11 +1,28 @@
 #!/usr/bin/python3
 import json
+import copy
 import subprocess as sp
 
 try:
     import videoinfo
 except:
     from utils import videoinfo
+
+
+class TrackInfo:
+    def __init__(self, newData={}):
+        self.Data = newData
+
+    def __contains__(self, value) -> bool:
+        return value in self.Data
+
+    def __getitem__(self, value: str):
+        return self.Data[value]
+
+    def getOutFile(self):
+        return "{}-{}.{}".format(
+            self.Data["id"], self.Data["index"], self.Data["extension"]
+        )
 
 
 class Info:
@@ -21,13 +38,24 @@ class Info:
             for i in range(len(self.Data["audio"])):
                 x = self.Data["audio"][i]
                 x["index"] = i
+                audioTrack = TrackInfo(x)
+                self.Data["audio"][i] = audioTrack
         if "subs" in self.Data:
             for i in range(len(self.Data["subs"])):
                 x = self.Data["subs"][i]
                 x["index"] = i
+                subtitleTrack = TrackInfo(x)
+                self.Data["subs"][i] = subtitleTrack
 
     def __str__(self):
-        return json.dumps(self.Data, indent=2)
+        printData = copy.deepcopy(self.Data)
+        if "audio" in printData:
+            for i in range(len(printData["audio"])):
+                printData["audio"][i] = printData["audio"][i].Data
+        if "subs" in printData:
+            for i in range(len(printData["subs"])):
+                printData["subs"][i] = printData["subs"][i].Data
+        return json.dumps(printData, indent=2)
 
     def __contains__(self, value) -> bool:
         return value in self.Data
@@ -225,4 +253,5 @@ class Info:
 if __name__ == "__main__":
     import sys
 
-    print(Info(sourceMKV=sys.argv[1]))
+    test = Info(sourceMKV=sys.argv[1])
+    print(test)
