@@ -2,6 +2,7 @@
 import json
 import copy
 import subprocess as sp
+from typing import Self
 
 try:
     import videoinfo
@@ -12,12 +13,26 @@ except:
 class TrackInfo:
     def __init__(self, newData={}):
         self.Data = newData
+        self.forcedFile = None
+        self.supSourceFile = None
 
     def __contains__(self, value) -> bool:
         return value in self.Data
 
     def __getitem__(self, value: str):
         return self.Data[value]
+
+    def setForcedFile(self, value: str):
+        self.forcedFile = value
+
+    def getForcedFile(self):
+        return self.forcedFile
+
+    def setSupSourceFile(self, track: Self):
+        self.supSourceFile = track.getOutFile()
+
+    def getSupSourceFile(self):
+        return self.supSourceFile
 
     def getOutFile(self):
         return "{}-{}.{}".format(
@@ -46,6 +61,19 @@ class Info:
                 x["index"] = i
                 subtitleTrack = TrackInfo(x)
                 self.Data["subs"][i] = subtitleTrack
+
+            for track in self.Data["subs"]:
+                if "sup2srt" not in track:
+                    continue
+                if not track["sup2srt"]:
+                    continue
+                for x in self.Data["subs"]:
+                    if "sup2srt" not in x and x["id"] == str(track["id"]):
+                        track.setSupSourceFile(x)
+                        break
+                    if not x["sup2srt"] and x["id"] == str(track["id"]):
+                        track.setSupSourceFile(x)
+                        break
 
     def __str__(self):
         printData = copy.deepcopy(self.Data)
