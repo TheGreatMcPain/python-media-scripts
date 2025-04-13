@@ -18,6 +18,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from utils import videoinfo
 from utils import nightmode
 from utils.info import Info
+from utils.info import TrackInfo
 
 import psutil  # Comment out of not using psutil
 
@@ -177,12 +178,12 @@ def mergeMKV(info):
                 "--default-track",
                 "0:" + str(int(track["default"])),
                 "--no-chapters",
-                info.getOutFile("audio", track),
+                track.getOutFile(),
             ]
 
     if "subs" in info:
         for track in info["subs"]:
-            supFile = info.getOutFile("subtitles", track)
+            supFile = track.getOutFile()
 
             if "external" in track:
                 supFile = track["external"]
@@ -283,11 +284,10 @@ def encodeVideo(info):
 
     if "subs" in info:
         for sub in info["subs"]:
-            if "external" not in sub:
-                supFile = "subtitles-forced-" + sub["id"] + ".sup"
-                if os.path.isfile(supFile):
-                    print("Hardcoding Forced Subtitle id:", sub["id"])
-                    video = vs.core.sub.ImageFile(video, supFile)
+            if sub.getForcedFile():
+                if os.path.isfile(sub.getForcedFile()):
+                    print("Hardcoding Subtitles:", sub.getForcedFile())
+                    video = vs.core.sub.ImageFile(video, sub.getForcedFile())
                     break
 
     if inputInfo.HDR10Plus:
@@ -373,127 +373,121 @@ def encodeVideo(info):
         exit(0)
 
 
-def prepForcedSubs(info: Info):
-    if "subs" in info:
-        subs = info["subs"]
-    else:
+def prepForcedSubs(track: TrackInfo):
+    if "external" in track:
+        print("Not checking external subtitles for forced subs.")
         return 0
 
-    for track in subs:
-        if "external" in track:
-            print("Not checking external subtitles for forced subs.")
-            return 0
+    origOutFile = track.getOutFile()
+    forcedOutFile = "forced-{}".format(track.getOutFile())
 
-        if not info.getOutFile("subtitle", track):
-            print("Subtitles doesn't exist!")
-            return 0
+    cmd = BDSUP2SUB + [
+        "--forced-only",
+        "--output",
+        forcedOutFile,
+        origOutFile,
+    ]
+    p = sp.Popen(cmd, stdout=sp.DEVNULL, stderr=sp.DEVNULL)
+    p.communicate()
+    print(
+        "Checking if '" + origOutFile + "' has forced subs"
+    )
+    if os.path.isfile(forcedOutFile):
+        track.setForcedFile(forcedOutFile)
+        os.mkdir("subtitles")
+        os.chdir("subtitles")
+        cmd = BDSUP2SUB + [
+            "--output",
+            "subtitles.xml",
+            os.path.join("..", origOutFile),
+        ]
+        print("Exporting to BDXML.")
+        p = sp.Popen(cmd, stdout=sp.DEVNULL, stderr=sp.DEVNULL)
+        p.communicate()
 
+        print("Swapping forced subtitle flag.")
+        tree = ET.parse("subtitles.xml")
+        root = tree.getroot()
+        for event in root.iter("Event"):
+            if event.attrib["Forced"] in "False":
+                event.set("Forced", "True")
+            else:
+                event.set("Forced", "False")
+        tree.write("subtitles-new.xml")
+        os.chdir("..")
+        print("Exporting to", origOutFile)
         cmd = BDSUP2SUB + [
             "--forced-only",
             "--output",
-            info.getOutFile("subtitles-forced", track),
-            info.getOutFile("subtitles", track),
+            "subtitles-temp.sup",
+            os.path.join("subtitles", "subtitles-new.xml"),
         ]
         p = sp.Popen(cmd, stdout=sp.DEVNULL, stderr=sp.DEVNULL)
         p.communicate()
-        print(
-            "Checking if '" + info.getOutFile("subtitles", track) + "' has forced subs"
-        )
-        if os.path.isfile(info.getOutFile("subtitles-forced", track)):
-            sourceFile = info.getOutFile("subtitles", track)
-            os.mkdir("subtitles")
-            os.chdir("subtitles")
-            cmd = BDSUP2SUB + [
-                "--output",
-                "subtitles.xml",
-                os.path.join("..", sourceFile),
-            ]
-            print("Exporting to BDXML.")
-            p = sp.Popen(cmd, stdout=sp.DEVNULL, stderr=sp.DEVNULL)
-            p.communicate()
-
-            print("Swapping forced subtitle flag.")
-            tree = ET.parse("subtitles.xml")
-            root = tree.getroot()
-            for event in root.iter("Event"):
-                if event.attrib["Forced"] in "False":
-                    event.set("Forced", "True")
-                else:
-                    event.set("Forced", "False")
-            tree.write("subtitles-new.xml")
-            os.chdir("..")
-            print("Exporting to", sourceFile)
-            cmd = BDSUP2SUB + [
-                "--forced-only",
-                "--output",
-                "subtitles-temp.sup",
-                os.path.join("subtitles", "subtitles-new.xml"),
-            ]
-            p = sp.Popen(cmd, stdout=sp.DEVNULL, stderr=sp.DEVNULL)
-            p.communicate()
-            cmd = BDSUP2SUB + [
-                "--force-all",
-                "clear",
-                "--output",
-                sourceFile,
-                "subtitles-temp.sup",
-            ]
-            p = sp.Popen(cmd, stdout=sp.DEVNULL, stderr=sp.DEVNULL)
-            p.communicate()
-            shutil.rmtree("subtitles", ignore_errors=True)
-            os.remove("subtitles-temp.sup")
+        cmd = BDSUP2SUB + [
+            "--force-all",
+            "clear",
+            "--output",
+            origOutFile,
+            "subtitles-temp.sup",
+        ]
+        p = sp.Popen(cmd, stdout=sp.DEVNULL, stderr=sp.DEVNULL)
+        p.communicate()
+        shutil.rmtree("subtitles", ignore_errors=True)
+        os.remove("subtitles-temp.sup")
 
 
-def subtitlesOCR(info: Info):
+def subtitlesOCR(track: TrackInfo):
+    if not shutil.which("sup2srt"):
+        print("'sup2srt' is not found!")
+        exit(1)
+
+    if not track.getForcedFile():
+        print("'sup2srt' enabled, but no matching 'sup' track.")
+        exit(1)
+
+    cmd = [
+        "sup2srt",
+        "-l",
+        track["language"],
+        "-o",
+        track.getOutFile(),
+        track.getSupSourceFile(),
+    ]
+
+    print("\nCreating SRT of track {} via sup2srt.".format(track["id"]))
+    print(" ".join(cmd))
+    sup2srtProcess = sp.Popen(cmd)
+    sup2srtProcess.communicate()
+
+    if "filter" not in track:
+        return
+    if track["filter"]:
+        print("Creating non-SDH subtitles.")
+        srt = Subtitles(track.getOutFile())
+        srt.filter()
+        srt.save()
+
+
+def convertSubtitles(info: Info):
     subs = None
     if "subs" in info:
         subs = info["subs"]
     if not subs:
         return 0
-    if not shutil.which("sup2srt"):
-        print("'sup2srt' is not found!")
-        exit(1)
 
     for track in subs:
-        if "sup2srt" not in track:
-            continue
-        if track["sup2srt"]:
-            sourceTrack = None
-            for x in subs:
-                if "sup2srt" not in x and x["id"] == str(track["id"]):
-                    sourceTrack = x
-                    break
-                if not x["sup2srt"] and x["id"] == str(track["id"]):
-                    sourceTrack = x
-                    break
-            if not sourceTrack:
-                print("'sup2srt' enabled, but no matching 'sup' track.")
-                exit(1)
-
-            cmd = [
-                "sup2srt",
-                "-l",
-                track["language"],
-                "-o",
-                info.getOutFile("subtitles", track),
-                info.getOutFile("subtitles", sourceTrack),
-            ]
-
-            print("\nCreating SRT of track {} via sup2srt.".format(track["id"]))
-            print(" ".join(cmd))
-            sup2srtProcess = sp.Popen(cmd)
-            sup2srtProcess.communicate()
-
-            if "filter" not in track:
-                continue
-            if track["filter"]:
-                print("Creating non-SDH subtitles.")
-                srt = Subtitles(info.getOutFile("subtitles", track))
-                srt.filter()
-                srt.save()
+        if "sup2srt" in track:
+            if track["sup2srt"]:
+                subtitlesOCR(track)
+            else:
+                prepForcedSubs(track)
+        else:
+            prepForcedSubs(track)
 
 
-def convertAudioTrack(sourceFile: str, info: Info, audioTrack):
+
+def convertAudioTrack(sourceFile: str, audioTrack):
     normalize: bool = False
     encodeOpts = None
     Filter: list = []
@@ -560,7 +554,7 @@ def convertAudioTrack(sourceFile: str, info: Info, audioTrack):
             audioTrack["id"],
         )
         print("Normalizing and converting audio using 'ffmpeg-normalize'")
-        ffmpeg_normalize.add_media_file(normTemp, info.getOutFile("audio", audioTrack))
+        ffmpeg_normalize.add_media_file(normTemp, audioTrack.getOutFile())
         ffmpeg_normalize.run_normalization()
         os.remove(normTemp)
     else:
@@ -571,7 +565,7 @@ def convertAudioTrack(sourceFile: str, info: Info, audioTrack):
             cmd += encodeOpts
         if len(Filter) > 0:
             cmd += ["-af", ",".join(Filter)]
-        cmd += [info.getOutFile("audio", audioTrack)]
+        cmd += [audioTrack.getOutFile()]
 
         print("Converting Audio via ffmpeg")
         nightmode.ffmpegAudio(cmd, sourceFile, audioTrack["id"])
@@ -585,7 +579,7 @@ def convertAudio(info: Info):
 
     for track in audio:
         if track["convert"]:
-            convertAudioTrack(sourceFile, info, track)
+            convertAudioTrack(sourceFile, track)
 
 
 def extractTracks(info):
@@ -603,7 +597,7 @@ def extractTracks(info):
     if audio != 0:
         for track in audio:
             if not track["convert"]:
-                cmd += ["{}:".format(track["id"]) + info.getOutFile("audio", track)]
+                cmd += ["{}:".format(track["id"]) + track.getOutFile()]
 
     if subs != 0:
         for track in subs:
@@ -612,7 +606,7 @@ def extractTracks(info):
                     continue
             if "external" in track:
                 continue
-            cmd += ["{}:".format(track["id"]) + info.getOutFile("subtitles", track)]
+            cmd += ["{}:".format(track["id"]) + track.getOutFile()]
 
     cmd += ["chapters", "chapters.xml"]
 
