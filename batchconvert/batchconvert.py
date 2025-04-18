@@ -21,7 +21,7 @@ from utils.info import TrackInfo
 import psutil  # Comment out of not using psutil
 
 # Set process niceness (Priority)
-psutil.Process(os.getpid()).nice(15)  # Comment out if not using psutil
+psutil.Process().nice(15)  # Comment out if not using psutil
 
 # Globals
 INFOFILE = "info.json"
@@ -37,28 +37,21 @@ BDSUP2SUB = ["bdsup2sub++"]
 
 def main():
     folders = []
-    lsdir = os.listdir(".")
-    if INFOFILE in lsdir:
-        folders.append(".")
-        if len(sys.argv) == 1:
-            print(INFOFILE, "found in current directory.")
-            print("We'll only convert one mkv file.\n")
-            convertMKV(INFOFILE)
+    if pathlib.Path(INFOFILE).exists():
+        folders.append(pathlib.Path.cwd())
     else:
-        for x in lsdir:
-            if os.path.isdir(x):
-                infoPath = os.path.join(x, INFOFILE)
-                if os.path.isfile(infoPath):
+        for x in pathlib.Path().cwd().iterdir():
+            if x.is_dir():
+                if x.joinpath(INFOFILE).exists():
                     folders.append(x)
 
-        if len(sys.argv) == 1:
-            for folder in folders:
-                os.chdir(folder)
-                index = folders.index(folder)
-                total = len(folders)
-                print(index, "out of", total, "done.\n")
-                convertMKV(INFOFILE)
-                os.chdir("..")
+    if len(sys.argv) == 1:
+        currentDir = pathlib.Path.cwd()
+        for folder in folders:
+            os.chdir(folder)
+            print(folders.index(folder), "out of", len(folders), "done.\n")
+            convertMKV(INFOFILE)
+            os.chdir(currentDir)
 
     print("Cleaning python cache files.")
     cleanPythonCache(".")
