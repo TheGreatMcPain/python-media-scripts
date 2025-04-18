@@ -89,7 +89,7 @@ def main():
             print("\nCleaning source video files")
             for folder in folders:
                 infoPath = os.path.join(folder, INFOFILE)
-                info = getInfo(infoPath)
+                info = Info(infoPath)
                 path = os.path.join(folder, info["sourceFile"])
                 if os.path.exists(path):
                     print("Deleting:", path)
@@ -389,9 +389,7 @@ def prepForcedSubs(track: TrackInfo):
     ]
     p = sp.Popen(cmd, stdout=sp.DEVNULL, stderr=sp.DEVNULL)
     p.communicate()
-    print(
-        "Checking if '" + origOutFile + "' has forced subs"
-    )
+    print("Checking if '" + origOutFile + "' has forced subs")
     if os.path.isfile(forcedOutFile):
         track.setForcedFile(forcedOutFile)
         os.mkdir("subtitles")
@@ -486,8 +484,7 @@ def convertSubtitles(info: Info):
             prepForcedSubs(track)
 
 
-
-def convertAudioTrack(sourceFile: str, audioTrack):
+def convertAudioTrack(sourceFile: str, audioTrack: TrackInfo):
     normalize: bool = False
     encodeOpts = None
     Filter: list = []
