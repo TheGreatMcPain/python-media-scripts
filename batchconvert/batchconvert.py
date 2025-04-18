@@ -58,33 +58,32 @@ def main():
 
     if len(sys.argv) == 2:
         if "--clean" == sys.argv[1]:
-            exclude = [os.path.basename(__file__), INFOFILE]
-            print("\nCleaning temp files")
+            exclude = [pathlib.Path(__file__).name, INFOFILE]
+            print("\nCleaning files")
             for folder in folders:
-                infoPath = os.path.join(folder, INFOFILE)
-                info = Info(jsonFile=infoPath)
+                info = Info(str(folder.joinpath(INFOFILE)))
                 exclude.append(info["sourceFile"])
                 if "vapoursynth" in info["video"]:
                     if "script" in info["video"]["vapoursynth"]:
                         exclude.append(info["video"]["vapoursynth"]["script"])
-                deleteList = list(set(os.listdir(folder)) - set(exclude))
-                for file in deleteList:
-                    if os.path.isdir(file):
+
+                for file in folder.iterdir():
+                    if file.is_dir():
                         continue
-                    filePath = os.path.join(folder, file)
-                    print("Deleting:", filePath)
-                    os.remove(filePath)
+                    if file.name not in exclude:
+                        print("Deleting", file)
+                        file.unlink()
+
                 exclude.remove(info["sourceFile"])
 
         if "--clean-sources" == sys.argv[1]:
             print("\nCleaning source video files")
             for folder in folders:
-                infoPath = os.path.join(folder, INFOFILE)
-                info = Info(infoPath)
-                path = os.path.join(folder, info["sourceFile"])
-                if os.path.exists(path):
+                info = Info(str(folder.joinpath(INFOFILE)))
+                path = folder.joinpath(info["sourceFile"])
+                if path.exists():
                     print("Deleting:", path)
-                    os.remove(path)
+                    path.unlink()
 
 
 def convertMKV(infoFile):
