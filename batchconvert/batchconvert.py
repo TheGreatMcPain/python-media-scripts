@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-import json
 import os
-import hashlib
 import pathlib
 import sys
 import shutil
@@ -110,8 +108,6 @@ def convertMKV(infoFile):
 
     if "juststarted" == status:
         extractTracks(info)
-        prepForcedSubs(info)
-        subtitlesOCR(info)
         status = writeResume("extracted")
         print()
     if "extracted" == status:
@@ -527,11 +523,9 @@ def convertAudioTrack(sourceFile: str, audioTrack: TrackInfo):
 
     if normalize:
         ffmpeg_normalize.post_filter = ",".join(Filter)
-        normTemp = "audio-norm-temp-{}.flac".format(
-            hashlib.sha1(
-                json.dumps(audioTrack, sort_keys=True).encode("utf-8")
-            ).hexdigest()
-        )
+        normTemp = pathlib.Path(
+            "norm-temp-{}".format(audioTrack.getOutFile())
+        ).with_suffix(".flac")
         # Creating a flac file, because it'll go faster than reading from the source.
         # Plus, 'ffmpeg-normalize' doesn't have an option to just output one audio track.
         print("'normalize' enabled! creating intermediate 'flac' file.")
@@ -551,9 +545,9 @@ def convertAudioTrack(sourceFile: str, audioTrack: TrackInfo):
             audioTrack["id"],
         )
         print("Normalizing and converting audio using 'ffmpeg-normalize'")
-        ffmpeg_normalize.add_media_file(normTemp, audioTrack.getOutFile())
+        ffmpeg_normalize.add_media_file(str(normTemp), audioTrack.getOutFile())
         ffmpeg_normalize.run_normalization()
-        os.remove(normTemp)
+        normTemp.unlink()
     else:
         cmd = ["ffmpeg", "-y", "-i", sourceFile]
         cmd += ["-map", "0:{}".format(audioTrack["id"])]
