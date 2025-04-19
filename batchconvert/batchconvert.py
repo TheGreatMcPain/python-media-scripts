@@ -104,6 +104,10 @@ def convertMKV(infoFile):
         print()
     if "extracted" == status:
         print()
+        convertSubtitles(info)
+        status = writeResume("subtitles")
+    if "subtitles" == status:
+        print()
         convertAudio(info)
         status = writeResume("audio")
     if "audio" == status:
@@ -428,7 +432,7 @@ def subtitlesOCR(track: TrackInfo):
         print("'sup2srt' is not found!")
         exit(1)
 
-    if not track.getForcedFile():
+    if not track.getSupSourceFile():
         print("'sup2srt' enabled, but no matching 'sup' track.")
         exit(1)
 
