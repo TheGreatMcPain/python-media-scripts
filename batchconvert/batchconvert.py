@@ -87,14 +87,14 @@ def main():
 
 
 def convertMKV(infoFile):
-    if os.path.isfile(RESUME):
+    if pathlib.Path(RESUME).exists():
         status = readResume()
     else:
         status = "juststarted"
 
     info = Info(jsonFile=infoFile)
 
-    if not os.path.isfile(info["sourceFile"]):
+    if not pathlib.Path(info["sourceFile"]).exists():
         print("'{}' not found! skipping".format(info["sourceFile"]))
         return
 
@@ -117,7 +117,9 @@ def convertMKV(infoFile):
         print()
     if "video" == status:
         mergeMKV(info)
-        os.rename(info["outputFile"], os.path.join("..", info["outputFile"]))
+        outputFilePath = pathlib.Path(info["outputFile"]).resolve()
+        dstPath = outputFilePath.parent.with_name(outputFilePath.name)
+        outputFilePath.replace(dstPath)
         status = writeResume("merged")
         print()
     if "merged" == status:
@@ -190,7 +192,7 @@ def mergeMKV(info):
                 supFile,
             ]
 
-    if os.path.isfile("chapters.xml"):
+    if pathlib.Path("chapters.xml").exists():
         cmd += ["--chapters", "chapters.xml"]
 
     print(" ".join(cmd))
@@ -228,7 +230,7 @@ def encodeVideo(info):
             exit(1)
         vapoursynthScriptPath = info["video"]["vapoursynth"]["script"]
 
-        if not os.path.isfile(vapoursynthScriptPath):
+        if not pathlib.Path(vapoursynthScriptPath).exists():
             print("'{}' doesn't exist!".format(vapoursynthScriptPath))
             exit(1)
 
@@ -277,7 +279,7 @@ def encodeVideo(info):
     if "subs" in info:
         for sub in info["subs"]:
             if sub.getForcedFile():
-                if os.path.isfile(sub.getForcedFile()):
+                if pathlib.Path(sub.getForcedFile()).exists():
                     print("Hardcoding Subtitles:", sub.getForcedFile())
                     video = vs.core.sub.ImageFile(video, sub.getForcedFile())
                     break
@@ -382,14 +384,14 @@ def prepForcedSubs(track: TrackInfo):
     p = sp.Popen(cmd, stdout=sp.DEVNULL, stderr=sp.DEVNULL)
     p.communicate()
     print("Checking if '" + origOutFile + "' has forced subs")
-    if os.path.isfile(forcedOutFile):
+    if pathlib.Path(forcedOutFile).exists():
         track.setForcedFile(forcedOutFile)
         os.mkdir("subtitles")
         os.chdir("subtitles")
         cmd = BDSUP2SUB + [
             "--output",
             "subtitles.xml",
-            os.path.join("..", origOutFile),
+            str(pathlib.Path("..", origOutFile)),
         ]
         print("Exporting to BDXML.")
         p = sp.Popen(cmd, stdout=sp.DEVNULL, stderr=sp.DEVNULL)
@@ -410,7 +412,7 @@ def prepForcedSubs(track: TrackInfo):
             "--forced-only",
             "--output",
             "subtitles-temp.sup",
-            os.path.join("subtitles", "subtitles-new.xml"),
+            str(pathlib.Path("subtitles", "subtitles-new.xml")),
         ]
         p = sp.Popen(cmd, stdout=sp.DEVNULL, stderr=sp.DEVNULL)
         p.communicate()
@@ -605,7 +607,7 @@ def extractTracks(info):
 
 # Based on this: https://code-examples.net/en/q/1ba5e27
 def cleanPythonCache(path):
-    if not os.path.isdir(path):
+    if not pathlib.Path(path).is_dir():
         print(path, "doesn't exist, or isn't a directory.")
         exit(1)
 
