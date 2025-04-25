@@ -45,14 +45,20 @@
         "filters": [
           {
             "downmixStereo": {
-              "center": 1.0,
+              "center": 2.0,
               "lfe": 0.707,
               "surrounds": 0.707
+            }
+          },
+          {
+            "normalize": {
+              "loudness_range_target": "keep",
+              "target_level": -23
             }
           }
         ]
       },
-      "default": true,
+      "default": false,
       "id": "1",
       "language": "eng",
       "title": "Stereo 'downmix' (AAC)"
@@ -63,32 +69,10 @@
         "codec": "aac",
         "encodeOpts": ["-b:a", "256K"],
         "filters": [
-          { "ffmpeg": "speechnorm" },
-          {
-            "downmixStereo": {
-              "center": 1.0,
-              "lfe": 0.707,
-              "surrounds": 0.707
-            }
-          }
-        ]
-      },
-      "default": true,
-      "id": "1",
-      "language": "eng",
-      "title": "Stereo 'speechnorm,downmix' (AAC)"
-    },
-    {
-      "extension": "m4a",
-      "convert": {
-        "codec": "aac",
-        "encodeOpts": ["-b:a", "256K"],
-        "filters": [
-          { "ffmpeg": "speechnorm=channels=FC" },
           { "ffmpeg": "dynaudnorm=compress=27.0:gausssize=53" },
           {
             "downmixStereo": {
-              "center": 1.0,
+              "center": 2.0,
               "lfe": 0.707,
               "surrounds": 0.707
             }
@@ -96,16 +80,42 @@
           {
             "normalize": {
               "loudness_range_target": "keep",
-              "target_level": -23,
-              "true_peak": -0.5
+              "target_level": -23
             }
           }
         ]
       },
-      "default": true,
+      "default": false,
       "id": "1",
       "language": "eng",
-      "title": "Stereo 'speechnorm,dynaudnorm,downmix,loudnorm' (AAC)"
+      "title": "Stereo 'dynaudnorm,downmix' (AAC)"
+    },
+    {
+      "extension": "m4a",
+      "convert": {
+        "codec": "aac",
+        "encodeOpts": ["-b:a", "256K"],
+        "filters": [
+          { "ffmpeg": "dynaudnorm=compress=27.0:gausssize=53" },
+          {
+            "downmixStereo": {
+              "center": 2.0,
+              "lfe": 0.0,
+              "surrounds": 0.707
+            }
+          },
+          {
+            "normalize": {
+              "loudness_range_target": "keep",
+              "target_level": -23
+            }
+          }
+        ]
+      },
+      "default": false,
+      "id": "1",
+      "language": "eng",
+      "title": "Stereo 'dynaudnorm,downmix-nolfe' (AAC)"
     },
     {
       "extension": "ac3",
@@ -125,7 +135,7 @@
       "default": false,
       "id": "6",
       "language": "eng",
-      "title": "English SDH Subtitles (SRT)"
+      "title": "English Subtitles (SRT)"
     },
     {
       "extension": "srt",
