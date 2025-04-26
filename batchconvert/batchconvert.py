@@ -522,26 +522,32 @@ def convertAudioTrack(sourceFile: str, audioTrack: TrackInfo):
     if normalize:
         ffmpeg_normalize.post_filter = ",".join(Filter)
         normTemp = pathlib.Path(
-            "norm-temp-{}".format(audioTrack.getOutFile())
-        ).with_suffix(".flac")
-        # Creating a flac file, because it'll go faster than reading from the source.
-        # Plus, 'ffmpeg-normalize' doesn't have an option to just output one audio track.
-        print("'normalize' enabled! creating intermediate 'flac' file.")
-        nightmode.ffmpegAudio(
-            [
-                "ffmpeg",
-                "-y",
-                "-i",
+            audioTrack.getOutFile()
+        ).with_suffix(".norm.flac")
+        print("'normalize' enabled!")
+        if not normTemp.exists():
+            # Creating a flac file, because it'll go faster than reading from the source.
+            # Plus, 'ffmpeg-normalize' doesn't have an option to just output one audio track.
+            print("Creating intermediate 'flac' file.")
+            normTempTemp = pathlib.Path(audioTrack.getOutFile()).with_suffix(".temp.flac")
+            nightmode.ffmpegAudio(
+                [
+                    "ffmpeg",
+                    "-y",
+                    "-i",
+                    sourceFile,
+                    "-map",
+                    "0:{}".format(audioTrack["id"]),
+                    "-acodec",
+                    "flac",
+                    normTempTemp,
+                ],
                 sourceFile,
-                "-map",
-                "0:{}".format(audioTrack["id"]),
-                "-acodec",
-                "flac",
-                normTemp,
-            ],
-            sourceFile,
-            audioTrack["id"],
-        )
+                audioTrack["id"],
+            )
+            normTempTemp.replace(normTemp)
+        else:
+            print("Intermediate 'flac' file already exists.")
         print("Normalizing and converting audio using 'ffmpeg-normalize'")
         ffmpeg_normalize.add_media_file(str(normTemp), audioTrack.getOutFile())
         ffmpeg_normalize.run_normalization()
