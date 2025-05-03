@@ -67,6 +67,11 @@ def main():
                     if "script" in info["video"]["vapoursynth"]:
                         exclude.append(info["video"]["vapoursynth"]["script"])
 
+                if "subs" in info:
+                    for track in info["subs"]:
+                        if "external" in track:
+                            exclude.append(track["external"])
+
                 for file in folder.iterdir():
                     if file.is_dir():
                         continue

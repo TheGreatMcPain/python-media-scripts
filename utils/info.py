@@ -35,6 +35,9 @@ class TrackInfo:
         return self.supSourceFile
 
     def getOutFile(self):
+        if "external" in self.Data:
+            if self.Data["external"]:
+                return ""
         return "{}-{}.{}".format(
             self.Data["id"], self.Data["index"], self.Data["extension"]
         )
