@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import argparse
 import os
 import pathlib
 import sys
@@ -36,6 +37,11 @@ BDSUP2SUB = ["bdsup2sub++"]
 
 
 def main():
+    parser = argparse.ArgumentParser(
+        prog="batchconvert",
+        description="Manipulates Bluray remuxes for use in media server.",
+    )
+
     folders = []
     if pathlib.Path(INFOFILE).exists():
         folders.append(pathlib.Path.cwd())
@@ -56,39 +62,60 @@ def main():
     print("Cleaning python cache files.")
     cleanPythonCache(".")
 
-    if len(sys.argv) == 2:
-        if "--clean" == sys.argv[1]:
-            exclude = [pathlib.Path(__file__).name, INFOFILE]
-            print("\nCleaning files")
-            for folder in folders:
-                info = Info(str(folder.joinpath(INFOFILE)))
-                exclude.append(info["sourceFile"])
-                if "vapoursynth" in info["video"]:
-                    if "script" in info["video"]["vapoursynth"]:
-                        exclude.append(info["video"]["vapoursynth"]["script"])
+    parser.add_argument(
+        "--clean",
+        dest="clean",
+        default=False,
+        action=argparse.BooleanOptionalAction,
+        help="Delete generated files.",
+    )
+    parser.add_argument(
+        "--clean-sources",
+        dest="cleanSources",
+        default=False,
+        action=argparse.BooleanOptionalAction,
+        help="Delete source files.",
+    )
+    args = parser.parse_args()
 
-                if "subs" in info:
-                    for track in info["subs"]:
-                        if "external" in track:
-                            exclude.append(track["external"])
+    if args.clean:
+        cleanFiles(folders, INFOFILE)
+    if args.cleanSources:
+        cleanSourceFiles(folders, INFOFILE)
 
-                for file in folder.iterdir():
-                    if file.is_dir():
-                        continue
-                    if file.name not in exclude:
-                        print("Deleting", file)
-                        file.unlink()
 
-                exclude.remove(info["sourceFile"])
+def cleanSourceFiles(folders: list, infoFile: str):
+    print("\nCleaning source video files")
+    for folder in folders:
+        info = Info(str(folder.joinpath(infoFile)))
+        path = folder.joinpath(info["sourceFile"])
+        if path.exists():
+            print("Deleting:", path)
+            path.unlink()
 
-        if "--clean-sources" == sys.argv[1]:
-            print("\nCleaning source video files")
-            for folder in folders:
-                info = Info(str(folder.joinpath(INFOFILE)))
-                path = folder.joinpath(info["sourceFile"])
-                if path.exists():
-                    print("Deleting:", path)
-                    path.unlink()
+
+def cleanFiles(folders: list, infoFile: str):
+    exclude = [pathlib.Path(__file__).name, infoFile]
+    for folder in folders:
+        info = Info(str(folder.joinpath(infoFile)))
+        exclude.append(info["sourceFile"])
+        if "vapoursynth" in info["video"]:
+            if "script" in info["video"]["vapoursynth"]:
+                exclude.append(info["video"]["vapoursynth"]["script"])
+
+        if "subs" in info:
+            for track in info["subs"]:
+                if "external" in track:
+                    exclude.append(track["external"])
+
+        for file in folder.iterdir():
+            if file.is_dir():
+                continue
+            if file.name not in exclude:
+                print("Deleting", file)
+                file.unlink()
+
+        exclude.remove(info["sourceFile"])
 
 
 def convertMKV(infoFile):
