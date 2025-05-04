@@ -553,15 +553,15 @@ def convertAudioTrack(sourceFile: str, audioTrack: TrackInfo):
 
     if normalize:
         ffmpeg_normalize.post_filter = ",".join(Filter)
-        normTemp = pathlib.Path(
-            audioTrack.getOutFile()
-        ).with_suffix(".norm.flac")
+        normTemp = pathlib.Path(audioTrack.getOutFile()).with_suffix(".norm.flac")
         print("'normalize' enabled!")
         if not normTemp.exists():
             # Creating a flac file, because it'll go faster than reading from the source.
             # Plus, 'ffmpeg-normalize' doesn't have an option to just output one audio track.
             print("Creating intermediate 'flac' file.")
-            normTempTemp = pathlib.Path(audioTrack.getOutFile()).with_suffix(".temp.flac")
+            normTempTemp = pathlib.Path(audioTrack.getOutFile()).with_suffix(
+                ".temp.flac"
+            )
             nightmode.ffmpegAudio(
                 [
                     "ffmpeg",
