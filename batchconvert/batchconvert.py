@@ -305,7 +305,7 @@ def encodeVideo(info):
     # Encode thread Function
     def encodeThread(video, cmd):
         nonlocal encodeProcess
-        encodeProcess = sp.Popen(cmd, stdin=sp.PIPE)
+        encodeProcess = sp.Popen(cmd, stdin=sp.PIPE, shell=True)
         video.output(encodeProcess.stdin, y4m=True)
 
     if "subs" in info:
@@ -376,7 +376,7 @@ def encodeVideo(info):
         cmd += ["--dhdr10-info=" + str(inputInfo.HDR10PlusMetadataFile)]
 
     if "x265Opts" not in info["video"]:
-        print("'x265Opts' not found in {}'s 'video' section!".format(INFOFILE))
+        print("'x265Opts' not found in 'video' section!")
         exit(1)
     cmd += info["video"]["x265Opts"]
 
@@ -394,8 +394,8 @@ def encodeVideo(info):
         t.join()  # Wait for the encode to finish.
     except KeyboardInterrupt:
         # Close the processes stdin, because x265 doesn't do it by itself.
-        if encodeProcess:
-            encodeProcess.stdin.close()
+        if type(encodeProcess) == sp.Popen:
+            encodeProcess.terminate()
         exit(0)
 
 
