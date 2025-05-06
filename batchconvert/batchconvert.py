@@ -379,19 +379,28 @@ def encodeVideo(info):
         print("'x265Opts' not found in 'video' section!")
         exit(1)
     cmd += info["video"]["x265Opts"]
+    cmd2 = cmd.copy()
+
+    if "2pass" in info["video"]:
+        if info["video"]["2pass"]:
+            cmd = cmd[:1] + ["--pass", "1", "--no-slow-firstpass"] + cmd[1:]
+            cmd2 = cmd2[:1] + ["--pass", "2"] + cmd2[1:]
 
     print(" ".join(cmd))
 
-    # We have to run the encode process in a separate thread, because
-    # CTRTL-C won't work normally when x265 is used via subprocess.
-    # x265 will exit, but the python process will not react to the signal.
-    t = threading.Thread(target=encodeThread, args=(video, cmd))
-
-    # This will close the python/vapoursynth thread first which will then
-    # cause the encoder to exit via EOF.
     try:
+        # We have to run the encode process in a separate thread, because
+        # CTRTL-C won't work normally when x265 is used via subprocess.
+        t = threading.Thread(target=encodeThread, args=(video, cmd))
         t.start()
-        t.join()  # Wait for the encode to finish.
+        t.join()
+
+        if "2pass" in info["video"]:
+            if info["video"]["2pass"]:
+                print(" ".join(cmd2))
+                t = threading.Thread(target=encodeThread, args=(video, cmd2))
+                t.start()
+                t.join()
     except KeyboardInterrupt:
         # Close the processes stdin, because x265 doesn't do it by itself.
         if type(encodeProcess) == sp.Popen:
