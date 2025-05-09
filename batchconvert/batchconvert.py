@@ -305,8 +305,9 @@ def encodeVideo(info):
     # Encode thread Function
     def encodeThread(video, cmd):
         nonlocal encodeProcess
-        encodeProcess = sp.Popen(cmd, stdin=sp.PIPE, shell=True)
+        encodeProcess = sp.Popen(cmd, stdin=sp.PIPE)
         video.output(encodeProcess.stdin, y4m=True)
+        encodeProcess.communicate()
 
     if "subs" in info:
         for sub in info["subs"]:
