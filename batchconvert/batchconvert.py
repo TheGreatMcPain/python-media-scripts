@@ -54,6 +54,7 @@ def main():
     if len(sys.argv) == 1:
         currentDir = pathlib.Path.cwd()
         for folder in folders:
+            print("Entering directory:", folder)
             os.chdir(folder)
             print(folders.index(folder), "out of", len(folders), "done.\n")
             convertMKV(INFOFILE)
@@ -321,7 +322,7 @@ def encodeVideo(info):
         "--input",
         "-",
         "--output",
-        info["video"]["output"],
+        str(tempOutFile),
         "--frames",
         str(video.num_frames),
     ]
@@ -337,10 +338,11 @@ def encodeVideo(info):
 
     cmd += ["--hdr10-opt"]
 
-    if inputInfo.HDR10MasterDisplayData:
-        cmd += ["--master-display", inputInfo.X265HDR10MasterDisplayString]
-    if inputInfo.HDR10ContentLightLeveData:
-        cmd += ["--max-cll", inputInfo.X265HDR10CLLString]
+    if inputInfo.HDR10:
+        if inputInfo.HDR10MasterDisplayData:
+            cmd += ["--master-display", inputInfo.X265HDR10MasterDisplayString]
+        if inputInfo.HDR10ContentLightLeveData:
+            cmd += ["--max-cll", inputInfo.X265HDR10CLLString]
 
     if inputInfo.DolbyVision:
         cmd += [

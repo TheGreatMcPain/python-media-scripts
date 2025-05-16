@@ -236,7 +236,8 @@ class videoInfo:
                 sideData["side_data_type"].lower()
                 == "Content light level metadata".lower()
             ):
-                return sideData
+                if len(sideData) > 1:
+                    return sideData
 
     def __getMasterDisplayData(self, sideDataList):
         for sideData in sideDataList:
@@ -244,7 +245,8 @@ class videoInfo:
                 sideData["side_data_type"].lower()
                 == "Mastering display metadata".lower()
             ):
-                return sideData
+                if len(sideData) > 1:
+                    return sideData
 
     def __getMasterDisplayColorValue(self, colorFraction: str, targetDenominator: int):
         numerator = int(colorFraction.split("/")[0])
