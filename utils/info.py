@@ -71,10 +71,10 @@ class Info:
                 if not track["sup2srt"]:
                     continue
                 for x in self.Data["subs"]:
-                    if "sup2srt" not in x and x["id"] == str(track["id"]):
+                    if "sup2srt" not in x and str(x["id"]) == str(track["id"]):
                         track.setSupSourceFile(x)
                         break
-                    if not x["sup2srt"] and x["id"] == str(track["id"]):
+                    if not x["sup2srt"] and str(x["id"]) == str(track["id"]):
                         track.setSupSourceFile(x)
                         break
 
