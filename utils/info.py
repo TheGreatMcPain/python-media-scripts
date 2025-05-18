@@ -16,6 +16,9 @@ class TrackInfo:
         self.forcedFile = None
         self.supSourceFile = None
 
+    def __str__(self):
+        return json.dumps(self.Data, indent=2)
+
     def __contains__(self, value) -> bool:
         return value in self.Data
 
@@ -44,17 +47,19 @@ class TrackInfo:
 
 
 class Info:
-    def __init__(self, jsonFile=None, sourceMKV=None):
+    def __init__(self, jsonFile=None, sourceMKV=None, nightmode: bool = False):
         self.Data = {}
         if jsonFile:
             with open(jsonFile, "r") as f:
                 self.Data = json.load(f)
         elif sourceMKV:
-            self.Data = self.generateTemplate(sourceMKV)
+            self.Data = self.generateTemplate(sourceMKV, nightmode=nightmode)
 
         if "audio" in self.Data:
             for i in range(len(self.Data["audio"])):
                 x = self.Data["audio"][i]
+                if type(x) == TrackInfo:
+                    continue
                 x["index"] = i
                 audioTrack = TrackInfo(x)
                 self.Data["audio"][i] = audioTrack
@@ -99,7 +104,7 @@ class Info:
             base, track["id"], track["index"], track["extension"]
         )
 
-    def generateTemplate(self, sourceMKV: str) -> dict:
+    def generateTemplate(self, sourceMKV: str, nightmode: bool = False) -> dict:
         ffprobeInfo = dict(
             json.loads(
                 sp.check_output(
@@ -136,6 +141,38 @@ class Info:
             template = self.getAudioTemplate(ffprobeInfo, i)
             if template != {}:
                 audio.append(template)
+                if nightmode:
+                    nightmode = False
+                    audio.append(
+                        self.nightmodeTemplate(
+                            TrackInfo(template),
+                            "Stereo 'downmix'",
+                            2.0,
+                            0.707,
+                            0.707,
+                            False,
+                        )
+                    )
+                    audio.append(
+                        self.nightmodeTemplate(
+                            TrackInfo(template),
+                            "Stereo 'dynaudnorm,downmix'",
+                            2.0,
+                            0.707,
+                            0.707,
+                            True,
+                        )
+                    )
+                    audio.append(
+                        self.nightmodeTemplate(
+                            TrackInfo(template),
+                            "Stereo 'dynaudnorm,downmix-nolfe'",
+                            2.0,
+                            0.0,
+                            0.707,
+                            True,
+                        )
+                    )
         for i in range(len(ffprobeInfo["streams"])):
             template = self.getSubtitleTemplate(ffprobeInfo, i)
             if template != {}:
@@ -279,6 +316,42 @@ class Info:
             output["title"] += " (SRT)"
 
         return output
+
+    def nightmodeTemplate(
+        self,
+        baseTrackInfo: TrackInfo,
+        trackName: str,
+        downmixCenter: float,
+        downmixLFE: float,
+        downmixSurrounds: float,
+        dynaudnorm: bool,
+    ) -> TrackInfo:
+        result = TrackInfo(copy.deepcopy(baseTrackInfo.Data))
+        dynAudNorm = {"ffmpeg": "dynaudnorm=compress=27.0:gausssize=53"}
+        normalize = {
+            "normalize": {
+                "loudness_range_target": "keep",
+                "target_level": -23,
+            }
+        }
+        downmixStereo = {
+            "downmixStereo": {
+                "center": downmixCenter,
+                "lfe": downmixLFE,
+                "surrounds": downmixSurrounds,
+            }
+        }
+        result.Data["title"] = trackName + " (AAC)"
+        result.Data["extension"] = "m4a"
+        result.Data["convert"] = {"codec": "aac", "encodeOpts": ["-b:a", "256K"]}
+        result.Data["convert"]["filters"] = []
+        if dynaudnorm:
+            result.Data["convert"]["filters"].append(dynAudNorm)
+        result.Data["convert"]["filters"].append(downmixStereo)
+        result.Data["convert"]["filters"].append(normalize)
+        result.Data["default"] = False
+
+        return result
 
 
 if __name__ == "__main__":
