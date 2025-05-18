@@ -8,6 +8,8 @@ import subprocess as sp
 import threading
 import vapoursynth as vs
 import importlib.util
+import json
+import time
 import xml.etree.cElementTree as ET
 from ffmpeg_normalize import FFmpegNormalize
 
@@ -15,7 +17,6 @@ from subtitle_filter import Subtitles
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from utils import videoinfo
-from utils import nightmode
 from utils.info import Info
 from utils.info import TrackInfo
 
@@ -505,6 +506,69 @@ def convertSubtitles(info: Info):
             prepForcedSubs(track)
 
 
+def ffmpegAudio(cmd, inFile, trackid):
+    print("Total Duration : ", end="")
+    info = json.loads(
+        sp.check_output(
+            (
+                "ffprobe",
+                "-v",
+                "quiet",
+                "-print_format",
+                "json",
+                "-show_format",
+                "-show_streams",
+                inFile,
+            ),
+            encoding="utf-8",
+        )
+    )
+    if trackid is not None:
+        tags = info["streams"][int(trackid)]
+    else:
+        tags = info["streams"][0]
+    if "tags" in tags:
+        tags = tags["tags"]
+    if "duration" in tags:
+        durationSec = int(tags["duration"].split(".")[0])
+        durationMili = tags["duration"].split(".")[1]
+        duration = time.strftime("%H:%M:%S", time.gmtime(durationSec))
+        duration += "." + durationMili
+        print(duration)
+    elif "DURATION" in tags:
+        print(tags["DURATION"])
+    elif "DURATION-eng" in tags:
+        print(tags["DURATION-eng"])
+    else:
+        print("UNKNOWN (try remuxing audio into a container like .mka, .m4a, etc.)")
+    for x in cmd:
+        print(x, end=" ")
+    print()
+    p = sp.Popen(cmd, stderr=sp.STDOUT, stdout=sp.PIPE, universal_newlines=True)
+    if not p.stdout:
+        return None
+    for line in p.stdout:
+        line = line.rstrip()
+        if "size=" in line:
+            print(f"{line}\r", end="")
+    print()
+
+
+def getffFilter(surVol: float, lfeVol: float, centerVol: float):
+    surVolStr = "{}".format(surVol)
+    lfeVolStr = "{}".format(lfeVol / 2)
+    centerVolStr = "{}".format(centerVol / 2)
+
+    ffPanFilterL = "FL<{c}*FC+{s}*FL+{s}*FLC+{s}*BL+{s}*SL+{l}*LFE".format(
+        c=centerVolStr, s=surVolStr, l=lfeVolStr
+    )
+    ffPanFilterR = "FR<{c}*FC+{s}*FR+{s}*FRC+{s}*BR+{s}*SR+{l}*LFE".format(
+        c=centerVolStr, s=surVolStr, l=lfeVolStr
+    )
+
+    return "pan=stereo|{}|{}".format(ffPanFilterL, ffPanFilterR)
+
+
 def convertAudioTrack(sourceFile: str, audioTrack: TrackInfo):
     normalize: bool = False
     encodeOpts = None
@@ -530,7 +594,7 @@ def convertAudioTrack(sourceFile: str, audioTrack: TrackInfo):
             if "downmixStereo" in ffFilter.keys():
                 downmixAlgo = ffFilter["downmixStereo"]
                 Filter.append(
-                    nightmode.getffFilter(
+                    getffFilter(
                         surVol=downmixAlgo["surrounds"],
                         lfeVol=downmixAlgo["lfe"],
                         centerVol=downmixAlgo["center"],
@@ -562,7 +626,7 @@ def convertAudioTrack(sourceFile: str, audioTrack: TrackInfo):
             normTempTemp = pathlib.Path(normTemp).with_suffix(
                 ".temp.flac"
             )
-            nightmode.ffmpegAudio(
+            ffmpegAudio(
                 [
                     "ffmpeg",
                     "-y",
@@ -594,7 +658,7 @@ def convertAudioTrack(sourceFile: str, audioTrack: TrackInfo):
         cmd += [str(tempOutFile)]
 
         print("Converting Audio via ffmpeg")
-        nightmode.ffmpegAudio(cmd, sourceFile, audioTrack["id"])
+        ffmpegAudio(cmd, sourceFile, audioTrack["id"])
 
     tempOutFile.replace(audioTrack.getOutFile())
 
