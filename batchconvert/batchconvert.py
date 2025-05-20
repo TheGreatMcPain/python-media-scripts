@@ -617,7 +617,7 @@ def convertAudioTrack(sourceFile: str, audioTrack: TrackInfo):
 
     if normalize:
         ffmpeg_normalize.post_filter = ",".join(Filter)
-        normTemp = pathlib.Path(audioTrack["id"] + ".norm.flac")
+        normTemp = pathlib.Path(str(audioTrack["id"]) + ".norm.flac")
         print("'normalize' enabled!")
         if not normTemp.exists():
             # Creating a flac file, because it'll go faster than reading from the source.
