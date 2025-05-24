@@ -223,10 +223,10 @@ class Info:
             hdrSpec.append("HDR10+")
         elif videoInfo.HDR10:
             hdrSpec.append("HDR10")
-        title += "/".join(hdrSpec)
+        title += "/".join(hdrSpec) + " "
 
         # We are always using HEVC anyways.
-        output["title"] = title + " (HEVC)"
+        output["title"] = title + "(HEVC)"
 
         output["language"] = "und"
         if "tags" in ffInfo["streams"][0]:
@@ -343,6 +343,23 @@ class Info:
 
         return TrackInfo(output)
 
+    def filterLanguages(self, audLangs: list[str] = [], subLangs: list[str] = []):
+        if len(audLangs) > 0:
+            if "audio" in self.Data:
+                newList = []
+                for track in self.Data["audio"]:
+                    if track["language"] in audLangs:
+                        newList.append(track)
+                self.Data["audio"] = newList
+
+        if len(subLangs) > 0:
+            if "subs" in self.Data:
+                newList = []
+                for track in self.Data["subs"]:
+                    if track["language"] in subLangs:
+                        newList.append(track)
+                self.Data["subs"] = newList
+
 
 if __name__ == "__main__":
     import argparse
@@ -352,8 +369,26 @@ if __name__ == "__main__":
     )
     parser.add_argument("sourceFile")
     parser.add_argument("--nightmode", action=argparse.BooleanOptionalAction)
+    parser.add_argument(
+        "--audio-languages",
+        dest="audLangs",
+        action="extend",
+        nargs="+",
+        type=str,
+        help="List of audio languages to keep.",
+        default=[],
+    )
+    parser.add_argument(
+        "--sub-languages",
+        action="extend",
+        dest="subLangs",
+        nargs="+",
+        type=str,
+        help="List of subtitle languages to keep.",
+        default=[],
+    )
     args = parser.parse_args()
-
     test = Info(sourceMKV=args.sourceFile, nightmode=args.nightmode)
+    test.filterLanguages(audLangs=args.audLangs, subLangs=args.subLangs)
 
     print(test)
