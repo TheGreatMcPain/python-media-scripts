@@ -9,12 +9,12 @@ import shutil
 def main():
     if not shutil.which("mkvmerge"):
         print("Dependency 'mkvmerge' not found! Is MKVToolNix installed?")
-    parser = argparse.ArgumentParser(prog="BDMV to MKV batch script")
+    parser = argparse.ArgumentParser()
     parser.add_argument(
         "--bluray-directory",
         "-d",
         dest="blurayDirs",
-        action="extends",
+        action="extend",
         nargs="+",
         help="Path to Bluray file structure.",
         type=str,
@@ -49,8 +49,12 @@ def main():
         blurayInfoList = filterBlurayInfo(jsonFile)
     else:
         if len(args.blurayDirs) == 0:
-            print(jsonFile, "not found!", "Bluray directory required.")
-            print(parser.print_usage())
+            print(
+                jsonFile.relative_to(Path.cwd()),
+                "not found!",
+                "Bluray directory required.",
+            )
+            parser.print_usage()
             exit(1)
 
         for blurayRoot in args.blurayDir:
@@ -58,7 +62,7 @@ def main():
 
             if not isBluray(blurayPath):
                 print(blurayPath, "is not a BluRay Directory.")
-                print(parser.print_usage())
+                parser.print_usage()
                 exit(1)
 
             blurayInfo = getBlurayInfo(blurayPath)
