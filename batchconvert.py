@@ -1,29 +1,28 @@
 #!/usr/bin/env python3
 import argparse
+import importlib.util
 import os
-import pathlib
+from pathlib import Path
 import sys
 import shutil
 import subprocess as sp
 import threading
-import vapoursynth as vs
-import importlib.util
-import json
-import time
 import xml.etree.cElementTree as ET
+
 from ffmpeg_normalize import FFmpegNormalize
-
 from subtitle_filter import Subtitles
+from utils.info import Info, TrackInfo
+from utils.videoinfo import videoInfo
+from vapoursynth import core, VideoNode
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from utils import videoinfo
-from utils.info import Info
-from utils.info import TrackInfo
-
-import psutil  # Comment out of not using psutil
-
-# Set process niceness (Priority)
-psutil.Process().nice(15)  # Comment out if not using psutil
+try:
+    import psutil
+    print("Setting process niceness to 15.")
+    psutil.Process().nice(15)
+    print("Setting process ioniceness to idle.")
+    psutil.Process().ionice(psutil.IOPRIO_CLASS_IDLE, 7)
+except:
+    pass
 
 # Globals
 INFOFILE = "info.json"
@@ -44,16 +43,16 @@ def main():
     )
 
     folders = []
-    if pathlib.Path(INFOFILE).exists():
-        folders.append(pathlib.Path.cwd())
+    if Path(INFOFILE).exists():
+        folders.append(Path.cwd())
     else:
-        for x in pathlib.Path().cwd().iterdir():
+        for x in Path().cwd().iterdir():
             if x.is_dir():
                 if x.joinpath(INFOFILE).exists():
                     folders.append(x)
 
     if len(sys.argv) == 1:
-        currentDir = pathlib.Path.cwd()
+        currentDir = Path.cwd()
         for folder in folders:
             print("Entering directory:", folder)
             os.chdir(folder)
@@ -97,7 +96,7 @@ def cleanSourceFiles(folders: list, infoFile: str):
 
 
 def cleanFiles(folders: list, infoFile: str):
-    exclude = [pathlib.Path(__file__).name, infoFile]
+    exclude = [Path(__file__).name, infoFile]
     for folder in folders:
         info = Info(str(folder.joinpath(infoFile)))
         exclude.append(info["sourceFile"])
@@ -122,10 +121,10 @@ def cleanFiles(folders: list, infoFile: str):
 
 def convertMKV(infoFile):
     info = Info(jsonFile=infoFile)
-    outputFilePath = pathlib.Path(info["outputFile"]).resolve()
+    outputFilePath = Path(info["outputFile"]).resolve()
     dstPath = outputFilePath.parent.with_name(outputFilePath.name)
 
-    if not pathlib.Path(info["sourceFile"]).exists():
+    if not Path(info["sourceFile"]).exists():
         print("'{}' not found! skipping".format(info["sourceFile"]))
         return
 
@@ -199,7 +198,7 @@ def mergeMKV(info):
                 supFile,
             ]
 
-    if pathlib.Path("chapters.xml").exists():
+    if Path("chapters.xml").exists():
         cmd += ["--chapters", "chapters.xml"]
 
     print(" ".join(cmd))
@@ -209,9 +208,9 @@ def mergeMKV(info):
 
 
 def encodeVideo(info):
-    inputInfo = videoinfo.videoInfo(info["sourceFile"])
-    tempOutFile = pathlib.Path("temp-" + info["video"]["output"])
-    outFile = pathlib.Path(info["video"]["output"])
+    inputInfo = videoInfo(info["sourceFile"])
+    tempOutFile = Path("temp-" + info["video"]["output"])
+    outFile = Path(info["video"]["output"])
 
     if outFile.exists():
         print(outFile, "already exists! skipping...")
@@ -245,7 +244,7 @@ def encodeVideo(info):
             exit(1)
         vapoursynthScriptPath = info["video"]["vapoursynth"]["script"]
 
-        if not pathlib.Path(vapoursynthScriptPath).exists():
+        if not Path(vapoursynthScriptPath).exists():
             print("'{}' doesn't exist!".format(vapoursynthScriptPath))
             exit(1)
 
@@ -276,12 +275,12 @@ def encodeVideo(info):
                 )
             )
             exit(1)
-        if type(video) != vs.VideoNode:
+        if type(video) != VideoNode:
             print("'vapoursynthFilter()' did not return VideoNode.")
             exit(1)
         print("Using 'vapoursynthFilter()' from '{}'".format(vapoursynthScriptPath))
     else:
-        video = vs.core.ffms2.Source(info["sourceFile"])
+        video = core.ffms2.Source(info["sourceFile"])
 
     encodeProcess = None
 
@@ -295,9 +294,9 @@ def encodeVideo(info):
     if "subs" in info:
         for sub in info["subs"]:
             if sub.getForcedFile():
-                if pathlib.Path(sub.getForcedFile()).exists():
+                if Path(sub.getForcedFile()).exists():
                     print("Hardcoding Subtitles:", sub.getForcedFile())
-                    video = vs.core.sub.ImageFile(video, sub.getForcedFile())
+                    video = core.sub.ImageFile(video, sub.getForcedFile())
                     break
 
     if inputInfo.HDR10Plus:
@@ -412,14 +411,14 @@ def prepForcedSubs(track: TrackInfo):
     p = sp.Popen(cmd, stdout=sp.DEVNULL, stderr=sp.DEVNULL)
     p.communicate()
     print("Checking if '" + origOutFile + "' has forced subs")
-    if pathlib.Path(forcedOutFile).exists():
+    if Path(forcedOutFile).exists():
         track.setForcedFile(forcedOutFile)
         os.mkdir("subtitles")
         os.chdir("subtitles")
         cmd = BDSUP2SUB + [
             "--output",
             "subtitles.xml",
-            str(pathlib.Path("..", origOutFile)),
+            str(Path("..", origOutFile)),
         ]
         print("Exporting to BDXML.")
         p = sp.Popen(cmd, stdout=sp.DEVNULL, stderr=sp.DEVNULL)
@@ -440,7 +439,7 @@ def prepForcedSubs(track: TrackInfo):
             "--forced-only",
             "--output",
             "subtitles-temp.sup",
-            str(pathlib.Path("subtitles", "subtitles-new.xml")),
+            str(Path("subtitles", "subtitles-new.xml")),
         ]
         p = sp.Popen(cmd, stdout=sp.DEVNULL, stderr=sp.DEVNULL)
         p.communicate()
@@ -506,44 +505,8 @@ def convertSubtitles(info: Info):
             prepForcedSubs(track)
 
 
-def ffmpegAudio(cmd, inFile, trackid):
-    print("Total Duration : ", end="")
-    info = json.loads(
-        sp.check_output(
-            (
-                "ffprobe",
-                "-v",
-                "quiet",
-                "-print_format",
-                "json",
-                "-show_format",
-                "-show_streams",
-                inFile,
-            ),
-            encoding="utf-8",
-        )
-    )
-    if trackid is not None:
-        tags = info["streams"][int(trackid)]
-    else:
-        tags = info["streams"][0]
-    if "tags" in tags:
-        tags = tags["tags"]
-    if "duration" in tags:
-        durationSec = int(tags["duration"].split(".")[0])
-        durationMili = tags["duration"].split(".")[1]
-        duration = time.strftime("%H:%M:%S", time.gmtime(durationSec))
-        duration += "." + durationMili
-        print(duration)
-    elif "DURATION" in tags:
-        print(tags["DURATION"])
-    elif "DURATION-eng" in tags:
-        print(tags["DURATION-eng"])
-    else:
-        print("UNKNOWN (try remuxing audio into a container like .mka, .m4a, etc.)")
-    for x in cmd:
-        print(x, end=" ")
-    print()
+def ffmpegRun(cmd):
+    print(" ".join(cmd))
     p = sp.Popen(cmd, stderr=sp.STDOUT, stdout=sp.PIPE, universal_newlines=True)
     if not p.stdout:
         return None
@@ -572,14 +535,14 @@ def getffFilter(surVol: float, lfeVol: float, centerVol: float):
 def convertAudioTrack(sourceFile: str, audioTrack: TrackInfo):
     normalize: bool = False
     encodeOpts = None
-    tempOutFile = pathlib.Path("temp-" + audioTrack.getOutFile())
+    tempOutFile = Path("temp-" + audioTrack.getOutFile())
     Filter: list = []
     ffmpeg_normalize = FFmpegNormalize(
         audio_codec=audioTrack["convert"]["codec"],
         extra_output_options=encodeOpts,
     )
 
-    if pathlib.Path(audioTrack.getOutFile()).exists():
+    if Path(audioTrack.getOutFile()).exists():
         print(audioTrack.getOutFile(), "already exists! skipping...")
         return 0
 
@@ -617,16 +580,16 @@ def convertAudioTrack(sourceFile: str, audioTrack: TrackInfo):
 
     if normalize:
         ffmpeg_normalize.post_filter = ",".join(Filter)
-        normTemp = pathlib.Path(str(audioTrack["id"]) + ".norm.flac")
+        normTemp = Path(str(audioTrack["id"]) + ".norm.flac")
         print("'normalize' enabled!")
         if not normTemp.exists():
             # Creating a flac file, because it'll go faster than reading from the source.
             # Plus, 'ffmpeg-normalize' doesn't have an option to just output one audio track.
             print("Creating intermediate 'flac' file.")
-            normTempTemp = pathlib.Path(normTemp).with_suffix(
+            normTempTemp = Path(normTemp).with_suffix(
                 ".temp.flac"
             )
-            ffmpegAudio(
+            ffmpegRun(
                 [
                     "ffmpeg",
                     "-y",
@@ -638,8 +601,6 @@ def convertAudioTrack(sourceFile: str, audioTrack: TrackInfo):
                     "flac",
                     normTempTemp,
                 ],
-                sourceFile,
-                audioTrack["id"],
             )
             normTempTemp.replace(normTemp)
         else:
@@ -658,7 +619,7 @@ def convertAudioTrack(sourceFile: str, audioTrack: TrackInfo):
         cmd += [str(tempOutFile)]
 
         print("Converting Audio via ffmpeg")
-        ffmpegAudio(cmd, sourceFile, audioTrack["id"])
+        ffmpegRun(cmd)
 
     tempOutFile.replace(audioTrack.getOutFile())
 
@@ -679,7 +640,7 @@ def extractTracks(info):
     tracks = []
     if "audio" in info:
         for track in info["audio"]:
-            if pathlib.Path(track.getOutFile()).exists():
+            if Path(track.getOutFile()).exists():
                 print(track.getOutFile(), "already exists! skipping...")
                 continue
             if track["convert"]:
@@ -687,7 +648,7 @@ def extractTracks(info):
             tracks.append(track)
     if "subs" in info:
         for track in info["subs"]:
-            if pathlib.Path(track.getOutFile()).exists():
+            if Path(track.getOutFile()).exists():
                 print(track.getOutFile(), "already exists! skipping...")
                 continue
             if "sup2srt" in track:
@@ -704,7 +665,7 @@ def extractTracks(info):
 
     cmd = ["mkvextract", sourceFile, "tracks"]
     for track in tracks:
-        tempOut = pathlib.Path("temp-" + track.getOutFile())
+        tempOut = Path("temp-" + track.getOutFile())
         cmd += ["{}:{}".format(track["id"], tempOut)]
         tempTracks.append(tempOut)
 
@@ -721,17 +682,17 @@ def extractTracks(info):
 
 # Based on this: https://code-examples.net/en/q/1ba5e27
 def cleanPythonCache(path):
-    if not pathlib.Path(path).is_dir():
+    if not Path(path).is_dir():
         print(path, "doesn't exist, or isn't a directory.")
         exit(1)
 
     # Search and delete .pyc and .pyo files
-    for p in pathlib.Path(path).rglob("*.py[co]"):
+    for p in Path(path).rglob("*.py[co]"):
         print("Deleting:", p)
         p.unlink()
 
     # Search and delete '__pycache__' directories
-    for p in pathlib.Path(path).rglob("__pycache__"):
+    for p in Path(path).rglob("__pycache__"):
         print("Deleting:", p)
         p.rmdir()
 
