@@ -1,7 +1,5 @@
 # Some Python scripts I use for BluRay re-encodes
 
-### TODO: Update README's and combine some of this into one program
-
 One of my hobbies is managing a media server which involves backing up BluRays,
 and preparing their contents for my server.
 
@@ -21,21 +19,37 @@ is killed prematurely. If the script finds the `bluray_data.json` file on the ne
 it will ask the user if they want to just use the json file instead of creating a new list
 of files to extract.
 
-## Nightmode
+# 'batchconvert.py' Usage
 
-TODO
+Each `source.mkv` will sit in its own folder, and along
+with it will be a `info.json`.
 
-## Batch Encode
+The `info.json` file contains information about the video which
+will determine the resulting video file.
 
-The `batchencode` folder has a script that prepares mkvs for use in my server.
+(`utils/info.py` can be used to generate an `info.json`)
 
-I wrote it with the intent of batch reproducing Blu-ray rips in the case of data loss.
+`vapoursynth-filter.py` can be used to pre-process the video via VapourSynth during transcoding.
+This is useful for deinterlacing, cropping, and/or resizing.
 
-## Misc Subtitle Scripts
+(See example `info.json` and `vapoursynth-filter.py`)
 
-`forced-subtitles` Creates forced subtitles by comparing two BDNXML subtitles
-and marking subs as forced where they overlap. This was very useful for the
-Planet of the Apes reboot movies, where I wanted to burn in the sign language
-subtitles, but didn't want any overlaps from the regular subtitles.
+Example directory structure:
 
-#### Usage for these scripts are in their respective folders.
+```
+bloopers/source.mkv
+bloopers/info.json
+deleted-scenes/source.mkv
+deleted-scenes/info.json
+deleted-scenes/vapoursynth-filter.py
+batchconvert.py
+```
+
+## Requirements (I think I got all of them.)
+
+- mkvtoolnix
+- ffmpeg
+- bdsup2sub (or bdsup2sub++) "The script needs to know where bdsup2sub is at."
+- VapourSynth
+- psutil (Only used for setting cpu priority)
+- sup2srt
