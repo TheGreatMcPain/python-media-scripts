@@ -14,13 +14,20 @@ except:
 
 class TrackInfo:
     def __init__(
-        self, title: str, extension: str, default: bool, trackId: int, language: str
+        self,
+        title: str,
+        extension: str,
+        default: bool,
+        trackId: int,
+        language: str,
+        sync: int,
     ):
         self.title = title
         self.extension: str = extension
         self.default: bool = default
         self.id: int = trackId
         self.language: str = language
+        self.sync: int = sync
         self.index: int = -1
 
     def getOutFile(self):
@@ -35,11 +42,12 @@ class SubtitleTrackInfo(TrackInfo):
         default: bool,
         trackId: int,
         language: str,
+        sync: int,
         sup2srt: bool,
         srtFilter: bool,
-        external: str | None,
+        external: str,
     ):
-        super().__init__(title, extension, default, trackId, language)
+        super().__init__(title, extension, default, trackId, language, sync)
         self.sup2srt = sup2srt
         self.srtFilter = srtFilter
         self.external: str | None = None
@@ -55,6 +63,8 @@ class SubtitleTrackInfo(TrackInfo):
         yield "default", self.default
         yield "id", self.id
         yield "language", self.language
+        if self.sync:
+            yield "sync", self.sync
         yield "sup2srt", self.sup2srt
         yield "filter", self.srtFilter
         if self.external:
@@ -75,9 +85,10 @@ class AudioTrackInfo(TrackInfo):
         default: bool,
         trackId: int,
         language: str,
-        convert: dict | bool,
+        sync: int,
+        convert: dict,
     ):
-        super().__init__(title, extension, default, trackId, language)
+        super().__init__(title, extension, default, trackId, language, sync)
         self.convert = convert
 
     def __iter__(self):
@@ -86,7 +97,12 @@ class AudioTrackInfo(TrackInfo):
         yield "default", self.default
         yield "id", self.id
         yield "language", self.language
-        yield "convert", self.convert
+        if self.sync:
+            yield "sync", self.sync
+        if self.convert:
+            yield "convert", self.convert
+        else:
+            yield "convert", False
 
     def nightmodeTemplate(
         self,
@@ -131,6 +147,7 @@ class VideoTrackInfo:
         language: str,
         output: str,
         convert: bool,
+        twoPass: bool,
         x265Opts: list[str],
         vapoursynthScript: str,
         vapoursynthVars: dict,
@@ -139,6 +156,7 @@ class VideoTrackInfo:
         self.title = title
         self.language = language
         self.output = output
+        self.twoPass = twoPass
         self.convert = convert
         self.x265Opts = x265Opts
         self.vapoursynthScript = vapoursynthScript
@@ -184,11 +202,15 @@ class Info:
             mkvmergeOpts = []
             if "mkvmergeOpts" in jsonData["video"]:
                 mkvmergeOpts = jsonData["video"]["mkvmergeOpts"]
+            twoPass = False
+            if "2pass" in jsonData["video"]:
+                twoPass = jsonData["video"]["2pass"]
             self.videoInfo = VideoTrackInfo(
                 jsonData["video"]["title"],
                 jsonData["video"]["language"],
                 jsonData["video"]["output"],
                 jsonData["video"]["convert"],
+                twoPass,
                 jsonData["video"]["x265Opts"],
                 vapoursynthScript,
                 vapoursynthVars,
@@ -197,6 +219,12 @@ class Info:
             if "audio" in jsonData:
                 for i in range(len(jsonData["audio"])):
                     track = jsonData["audio"][i]
+                    sync = 0
+                    if "sync" in track:
+                        sync = track["sync"]
+                    convert = {}
+                    if track["convert"]:
+                        convert = track["convert"]
                     self.audioInfo.append(
                         AudioTrackInfo(
                             track["title"],
@@ -204,13 +232,17 @@ class Info:
                             track["default"],
                             track["id"],
                             track["language"],
-                            track["convert"],
+                            sync,
+                            convert,
                         )
                     )
             if "subs" in jsonData:
                 for i in range(len(jsonData["subs"])):
                     track = jsonData["subs"][i]
-                    external = None
+                    sync = 0
+                    if "sync" in track:
+                        sync = track["sync"]
+                    external = ""
                     if "external" in track:
                         if track["external"]:
                             external = track["external"]
@@ -221,6 +253,7 @@ class Info:
                             track["default"],
                             track["id"],
                             track["language"],
+                            sync,
                             track["sup2srt"],
                             track["filter"],
                             external,
@@ -382,6 +415,7 @@ class Info:
             output["language"],
             output["output"],
             output["convert"],
+            False,
             output["x265Opts"],
             output["vapoursynth"]["script"],
             output["vapoursynth"]["variables"],
@@ -406,7 +440,7 @@ class Info:
         else:
             output["extension"] = "mka"
 
-        output["convert"] = False
+        output["convert"] = {}
 
         # For codecs we don't already know just remux it ffmpeg.
         if output["extension"] in "mka":
@@ -445,6 +479,7 @@ class Info:
             output["default"],
             output["id"],
             output["language"],
+            0,
             output["convert"],
         )
 
@@ -480,9 +515,10 @@ class Info:
             output["default"],
             output["id"],
             output["language"],
+            0,
             output["sup2srt"],
             output["filter"],
-            None,
+            "",
         )
 
     def filterLanguages(self, audLangs: list[str] = [], subLangs: list[str] = []):
