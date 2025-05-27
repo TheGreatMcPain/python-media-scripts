@@ -567,7 +567,7 @@ def convertAudioTrack(sourceFile: str, audioTrack: AudioTrackInfo):
                     "0:{}".format(audioTrack.id),
                     "-acodec",
                     "flac",
-                    normTempTemp,
+                    str(normTempTemp),
                 ],
             )
             normTempTemp.replace(normTemp)
@@ -626,7 +626,7 @@ def extractTracks(info: Info):
     cmd = ["mkvextract", sourceFile, "tracks"]
     for track in tracks:
         tempOut = Path("temp-" + track.getOutFile())
-        cmd += ["{}:{}".format(track["id"], tempOut)]
+        cmd += ["{}:{}".format(track.id, tempOut)]
         tempTracks.append(tempOut)
 
     cmd += ["chapters", "chapters.xml"]

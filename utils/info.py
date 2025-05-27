@@ -191,6 +191,7 @@ class Info:
         self.subInfo: list[SubtitleTrackInfo] = []
         if jsonFile:
             jsonData: dict = json.loads(Path(jsonFile).read_text())
+            self.sourceMKV = jsonData["sourceFile"]
             self.title = jsonData["title"]
             self.outputFile = jsonData["outputFile"]
             vapoursynthScript = ""
