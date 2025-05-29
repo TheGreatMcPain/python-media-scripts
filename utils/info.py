@@ -3,7 +3,6 @@ import json
 import copy
 import subprocess as sp
 from pathlib import Path
-from ffmpeg_normalize import FFmpegNormalize
 from typing import Self
 
 try:
@@ -15,12 +14,13 @@ except:
 class TrackInfo:
     def __init__(
         self,
-        title: str,
-        extension: str,
-        default: bool,
-        trackId: int,
-        language: str,
-        sync: int,
+        title: str = "",
+        extension: str = ".bin",
+        default: bool = False,
+        trackId: int = -1,
+        language: str = "und",
+        sync: int = 0,
+        index: int = -1,
     ):
         self.title = title
         self.extension: str = extension
@@ -28,7 +28,7 @@ class TrackInfo:
         self.id: int = trackId
         self.language: str = language
         self.sync: int = sync
-        self.index: int = -1
+        self.index: int = index
 
     def getOutFile(self):
         return "{}-{}.{}".format(self.id, self.index, self.extension)
@@ -37,20 +37,20 @@ class TrackInfo:
 class SubtitleTrackInfo(TrackInfo):
     def __init__(
         self,
-        title: str,
-        extension: str,
-        default: bool,
-        trackId: int,
-        language: str,
-        sync: int,
-        sup2srt: bool,
-        srtFilter: bool,
-        external: str,
+        title: str = "",
+        extension: str = ".bin",
+        default: bool = False,
+        trackId: int = -1,
+        language: str = "und",
+        sync: int = 0,
+        sup2srt: bool = False,
+        srtFilter: bool = False,
+        external: str = "",
     ):
         super().__init__(title, extension, default, trackId, language, sync)
         self.sup2srt = sup2srt
         self.srtFilter = srtFilter
-        self.external: str | None = None
+        self.external: str = external
         self.sourceTrack: TrackInfo | None = None
 
         if external:
@@ -80,13 +80,13 @@ class SubtitleTrackInfo(TrackInfo):
 class AudioTrackInfo(TrackInfo):
     def __init__(
         self,
-        title: str,
-        extension: str,
-        default: bool,
-        trackId: int,
-        language: str,
-        sync: int,
-        convert: dict,
+        title: str = "",
+        extension: str = ".bin",
+        default: bool = False,
+        trackId: int = -1,
+        language: str = "und",
+        sync: int = 0,
+        convert: dict = {},
     ):
         super().__init__(title, extension, default, trackId, language, sync)
         self.convert = convert
@@ -143,15 +143,15 @@ class AudioTrackInfo(TrackInfo):
 class VideoTrackInfo:
     def __init__(
         self,
-        title: str,
-        language: str,
-        output: str,
-        convert: bool,
-        twoPass: bool,
-        x265Opts: list[str],
-        vapoursynthScript: str,
-        vapoursynthVars: dict,
-        mkvmergeOpts: list[str],
+        title: str = "",
+        language: str = "und",
+        output: str = "video.hevc",
+        convert: bool = True,
+        twoPass: bool = False,
+        x265Opts: list[str] = [],
+        vapoursynthScript: str = "",
+        vapoursynthVars: dict = {},
+        mkvmergeOpts: list[str] = [],
     ):
         self.title = title
         self.language = language
@@ -194,72 +194,63 @@ class Info:
             self.sourceMKV = jsonData["sourceFile"]
             self.title = jsonData["title"]
             self.outputFile = jsonData["outputFile"]
-            vapoursynthScript = ""
-            vapoursynthVars = {}
-            if "vapoursynth" in jsonData["video"]:
-                vapoursynthScript = jsonData["video"]["vapoursynth"]["script"]
-                if "variables" in jsonData["video"]["vapoursynth"]:
-                    vapoursynthVars = jsonData["video"]["vapoursynth"]["variables"]
-            mkvmergeOpts = []
-            if "mkvmergeOpts" in jsonData["video"]:
-                mkvmergeOpts = jsonData["video"]["mkvmergeOpts"]
-            twoPass = False
-            if "2pass" in jsonData["video"]:
-                twoPass = jsonData["video"]["2pass"]
+
             self.videoInfo = VideoTrackInfo(
-                jsonData["video"]["title"],
-                jsonData["video"]["language"],
-                jsonData["video"]["output"],
-                jsonData["video"]["convert"],
-                twoPass,
-                jsonData["video"]["x265Opts"],
-                vapoursynthScript,
-                vapoursynthVars,
-                mkvmergeOpts,
+                title=jsonData["video"]["title"],
+                language=jsonData["video"]["language"],
+                output=jsonData["video"]["output"],
+                convert=jsonData["video"]["convert"],
             )
+            if "2pass" in jsonData["video"]:
+                self.videoInfo.twoPass = jsonData["video"]["2pass"]
+            if "x265Opts" in jsonData["video"]:
+                self.videoInfo.x265Opts = jsonData["video"]["x265Opts"]
+            if "vapoursynth" in jsonData["video"]:
+                vapoursynth = jsonData["video"]["vapoursynth"]
+                self.videoInfo.vapoursynthScript = vapoursynth["script"]
+                if "variables" in vapoursynth:
+                    self.videoInfo.vapoursynthVars = vapoursynth["variables"]
+            if "mkvmergeOpts" in jsonData["video"]:
+                self.videoInfo.mkvmergeOpts = jsonData["video"]["mkvmergeOpts"]
+
             if "audio" in jsonData:
                 for i in range(len(jsonData["audio"])):
                     track = jsonData["audio"][i]
-                    sync = 0
-                    if "sync" in track:
-                        sync = track["sync"]
-                    convert = {}
-                    if track["convert"]:
-                        convert = track["convert"]
-                    self.audioInfo.append(
-                        AudioTrackInfo(
-                            track["title"],
-                            track["extension"],
-                            track["default"],
-                            track["id"],
-                            track["language"],
-                            sync,
-                            convert,
-                        )
+                    trackInfo = AudioTrackInfo(
+                        title=track["title"],
+                        extension=track["extension"],
+                        default=track["default"],
+                        trackId=track["id"],
+                        language=track["language"],
                     )
+                    if "sync" in track:
+                        trackInfo.sync = track["sync"]
+                    if "convert" in track:
+                        if track["convert"]:
+                            trackInfo.convert = track["convert"]
+                    self.audioInfo.append(trackInfo)
+
             if "subs" in jsonData:
                 for i in range(len(jsonData["subs"])):
                     track = jsonData["subs"][i]
-                    sync = 0
+                    trackInfo = SubtitleTrackInfo(
+                        track["title"],
+                        track["extension"],
+                        track["default"],
+                        track["id"],
+                        track["language"],
+                    )
+                    if "sup2srt" in track:
+                        trackInfo.sup2srt = track["sup2srt"]
+                    if "filter" in track:
+                        trackInfo.srtFilter = track["filter"]
                     if "sync" in track:
-                        sync = track["sync"]
-                    external = ""
+                        trackInfo.sync = track["sync"]
                     if "external" in track:
                         if track["external"]:
-                            external = track["external"]
-                    self.subInfo.append(
-                        SubtitleTrackInfo(
-                            track["title"],
-                            track["extension"],
-                            track["default"],
-                            track["id"],
-                            track["language"],
-                            sync,
-                            track["sup2srt"],
-                            track["filter"],
-                            external,
-                        )
-                    )
+                            trackInfo.external = track["external"]
+                    self.subInfo.append(trackInfo)
+
         elif sourceMKV:
             self.generateTemplate(sourceMKV, nightmode=nightmode)
 
