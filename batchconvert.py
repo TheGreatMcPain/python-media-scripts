@@ -78,12 +78,42 @@ def main():
         action=argparse.BooleanOptionalAction,
         help="Delete source files.",
     )
+
+    subparser = parser.add_subparsers(help="subcommand help")
+    parser_config = subparser.add_parser("config", help="config help")
+    parser_config.add_argument("sourceFile")
+    parser_config.add_argument(
+        "--nightmode", dest="configNightMode", action=argparse.BooleanOptionalAction
+    )
+    parser_config.add_argument(
+        "--audio-languages",
+        dest="configAudLangs",
+        action="extend",
+        nargs="+",
+        type=str,
+        help="List of audio languages to keep.",
+        default=[],
+    )
+    parser_config.add_argument(
+        "--sub-languages",
+        action="extend",
+        dest="configSubLangs",
+        nargs="+",
+        type=str,
+        help="List of subtitle languages to keep.",
+        default=[],
+    )
     args = parser.parse_args()
 
     if args.clean:
         cleanFiles(folders, INFOFILE)
     if args.cleanSources:
         cleanSourceFiles(folders, INFOFILE)
+
+    if args.sourceFile:
+        test = Info(sourceMKV=args.sourceFile, nightmode=args.configNightMode)
+        test.filterLanguages(audLangs=args.configAudLangs, subLangs=args.configSubLangs)
+        print(test)
 
 
 def cleanSourceFiles(folders: list, infoFile: str):
