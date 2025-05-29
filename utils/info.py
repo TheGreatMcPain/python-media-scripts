@@ -197,7 +197,7 @@ class Info:
             vapoursynthScript = ""
             vapoursynthVars = {}
             if "vapoursynth" in jsonData["video"]:
-                vapoursynthScript = jsonData["video"]["script"]
+                vapoursynthScript = jsonData["video"]["vapoursynth"]["script"]
                 if "variables" in jsonData["video"]["vapoursynth"]:
                     vapoursynthVars = jsonData["video"]["vapoursynth"]["variables"]
             mkvmergeOpts = []
