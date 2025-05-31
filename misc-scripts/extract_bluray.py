@@ -57,7 +57,7 @@ def main():
             parser.print_usage()
             exit(1)
 
-        for blurayRoot in args.blurayDir:
+        for blurayRoot in args.blurayDirs:
             blurayPath = Path(blurayRoot)
 
             if not isBluray(blurayPath):
@@ -153,6 +153,8 @@ def batchCreateMKVs(BluRayDir, titles, outFile):
 
 
 def getBluRayFilePath(BluRayPath: Path, fileName: Path) -> Path:
+    BluRayPath = Path(BluRayPath)
+    fileName = Path(fileName)
     """
     Returns that full path of a m2ts/mpls file.
     """
@@ -168,11 +170,13 @@ def getBluRayFilePath(BluRayPath: Path, fileName: Path) -> Path:
 
 
 def titleExists(BluRayPath: Path, fileName: Path):
+    BluRayPath = Path(BluRayPath)
+    fileName = Path(fileName)
     """
     Checks if a file exists in the BluRay.
     """
     ext = fileName.suffix
-    if ext not in ["m2ts", "mpls"]:
+    if ext not in [".m2ts", ".mpls"]:
         print(ext, "Is not a BluRay file extention.")
         return False
 
