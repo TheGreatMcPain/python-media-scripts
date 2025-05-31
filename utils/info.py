@@ -164,9 +164,8 @@ class VideoTrackInfo:
         self.mkvmergeOpts: list[str] = mkvmergeOpts
 
     def __iter__(self):
-        vapoursynth = False
+        vapoursynth = {}
         if self.vapoursynthScript != "":
-            vapoursynth = {}
             vapoursynth["script"] = self.vapoursynthScript
         if vapoursynth:
             if self.vapoursynthVars != {}:
@@ -176,6 +175,8 @@ class VideoTrackInfo:
         yield "output", self.output
         yield "convert", self.convert
         yield "x265Opts", self.x265Opts
+        if self.twoPass:
+            yield "2pass", self.twoPass
         yield "vapoursynth", vapoursynth
         if self.mkvmergeOpts != []:
             yield "mkvmergeOpts", self.mkvmergeOpts
@@ -207,7 +208,8 @@ class Info:
                 self.videoInfo.x265Opts = jsonData["video"]["x265Opts"]
             if "vapoursynth" in jsonData["video"]:
                 vapoursynth = jsonData["video"]["vapoursynth"]
-                self.videoInfo.vapoursynthScript = vapoursynth["script"]
+                if "script" in vapoursynth:
+                    self.videoInfo.vapoursynthScript = vapoursynth["script"]
                 if "variables" in vapoursynth:
                     self.videoInfo.vapoursynthVars = vapoursynth["variables"]
             if "mkvmergeOpts" in jsonData["video"]:
