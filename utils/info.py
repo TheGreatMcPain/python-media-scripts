@@ -143,6 +143,7 @@ class AudioTrackInfo(TrackInfo):
 class VideoTrackInfo:
     def __init__(
         self,
+        jsonData: dict = {},
         title: str = "",
         language: str = "und",
         output: str = "video.hevc",
@@ -162,6 +163,30 @@ class VideoTrackInfo:
         self.vapoursynthScript = vapoursynthScript
         self.vapoursynthVars = vapoursynthVars
         self.mkvmergeOpts: list[str] = mkvmergeOpts
+
+        if jsonData:
+            vapoursynth = False
+            if self.vapoursynthScript != "":
+                vapoursynth = {}
+                vapoursynth["script"] = self.vapoursynthScript
+            if vapoursynth:
+                if self.vapoursynthVars != {}:
+                    vapoursynth["variables"] = self.vapoursynthVars
+            self.title = jsonData["title"]
+            self.language = jsonData["language"]
+            self.output = jsonData["output"]
+            self.convert = jsonData["convert"]
+            if "2pass" in jsonData:
+                self.twoPass = jsonData["2pass"]
+            self.twoPass = twoPass
+            self.x265Opts = jsonData["x265Opts"]
+            if "vapoursynth" in jsonData:
+                if "script" in jsonData["vapoursynth"]:
+                    self.vapoursynthScript = jsonData["vapoursynth"]["script"]
+                if "variables" in jsonData["vapoursynth"]:
+                    self.vapoursynthVars = jsonData["vapoursynth"]["variables"]
+            if "mkvmergeOpts" in jsonData:
+                self.mkvmergeOpts = jsonData["mkvmergeOpts"]
 
     def __iter__(self):
         vapoursynth = {}
