@@ -382,9 +382,9 @@ class Info:
 
     def getVideoTemplate(self, ffInfo: dict, inFile: str) -> VideoTrackInfo:
         videoInfo = videoinfo.videoInfo(inFile)
-        output = {}
+        output = VideoTrackInfo()
 
-        title = "{}x{}p{} ".format(videoInfo.Width, videoInfo.Height, videoInfo.FPS)
+        title = ["{}x{}p{}".format(videoInfo.Width, videoInfo.Height, videoInfo.FPS)]
         hdrSpec = []
         if videoInfo.DolbyVision:
             hdrSpec.append("DV")
@@ -392,20 +392,21 @@ class Info:
             hdrSpec.append("HDR10+")
         elif videoInfo.HDR10:
             hdrSpec.append("HDR10")
-        title += "/".join(hdrSpec) + " "
+        title.append("/".join(hdrSpec))
 
         # We are always using HEVC anyways.
-        output["title"] = title + "(HEVC)"
+        title.append("(HEVC)")
+        output.title = " ".join(title)
 
-        output["language"] = "und"
+        output.language = "und"
         if "tags" in ffInfo["streams"][0]:
             tags = ffInfo["streams"][0]["tags"]
             if "language" in tags:
-                output["language"] = tags["language"]
+                output.language = tags["language"]
 
-        output["output"] = "video.hevc"
-        output["convert"] = True
-        output["x265Opts"] = [
+        output.output = "video.hevc"
+        output.convert = True
+        output.x265Opts = [
             "--preset",
             "medium",
             "--crf",
@@ -417,128 +418,97 @@ class Info:
             "--output-depth",
             "10",
         ]
-        output["vapoursynth"] = {
-            "script": "vapoursynth-filter.py",
-            "variables": {"coolValue": "yeet"},
-        }
+        output.vapoursynthScript = "vapoursynth-filter.py"
+        output.vapoursynthVars = {"coolValue": "yeet"}
 
-        mkvmergeOpts = []
         if "display_aspect_ratio" in ffInfo["streams"][0]:
             aspectRatio = ffInfo["streams"][0]["display_aspect_ratio"]
             aspectRatio = aspectRatio.replace(":", "/")
-            mkvmergeOpts = ["--aspect-ratio", "0:{}".format(aspectRatio)]
-        output["mkvmergeOpts"] = mkvmergeOpts
+            output.mkvmergeOpts = ["--aspect-ratio", "0:{}".format(aspectRatio)]
 
-        return VideoTrackInfo(
-            output["title"],
-            output["language"],
-            output["output"],
-            output["convert"],
-            False,
-            output["x265Opts"],
-            output["vapoursynth"]["script"],
-            output["vapoursynth"]["variables"],
-            output["mkvmergeOpts"],
-        )
+        return output
 
     def getAudioTemplate(self, ffInfo: dict, trackid: int) -> AudioTrackInfo | None:
         if ffInfo["streams"][trackid]["codec_type"] not in "audio":
             return None
         streamInfo = ffInfo["streams"][trackid]
-
-        output = {}
+        output = AudioTrackInfo()
 
         if streamInfo["codec_name"].lower() in "dts":
-            output["extension"] = "dts"
+            output.extension = "dts"
             if "dts-hd" in streamInfo["profile"].lower():
-                output["extension"] = "dtshd"
+                output.extension = "dtshd"
         elif streamInfo["codec_name"].lower() in "truehd":
-            output["extension"] = "truehd"
+            output.extension = "truehd"
         elif streamInfo["codec_name"].lower() in "ac3":
-            output["extension"] = "ac3"
+            output.extension = "ac3"
         else:
-            output["extension"] = "mka"
+            output.extension = "mka"
 
-        output["convert"] = {}
+        output.convert = {}
 
         # For codecs we don't already know just remux it ffmpeg.
-        if output["extension"] in "mka":
-            output["convert"] = {}
-            output["convert"]["codec"] = "copy"
+        if output.extension in "mka":
+            output.convert = {}
+            output.convert["codec"] = "copy"
 
-        output["default"] = False
-        output["id"] = trackid
+        output.default = False
+        output.id = trackid
 
         if streamInfo["tags"]["language"]:
-            output["language"] = streamInfo["tags"]["language"]
+            output.language = streamInfo["tags"]["language"]
 
-        output["title"] = ""
+        title = []
         if streamInfo["channels"] == 1:
-            output["title"] = "Mono "
+            title.append("Mono")
         elif streamInfo["channels"] == 2:
-            output["title"] = "Stereo "
+            title.append("Stereo")
         else:
-            output["title"] = streamInfo["channel_layout"][:3] + " "
-            subType = "Surround "
+            title.append(streamInfo["channel_layout"][:3])
+            subType = "Surround"
             if "profile" in streamInfo:
                 if "atmos" in streamInfo["profile"].lower():
-                    subType = "Atmos "
+                    subType = "Atmos"
                 if "dts:x" in streamInfo["profile"].lower():
-                    subType = "DTS:X "
-            output["title"] += subType
+                    subType = "DTS:X"
+            title.append(subType)
 
-        if output["extension"] == "mka":
-            output["title"] += "({})".format(streamInfo["codec_name"].upper())
+        if output.extension == "mka":
+            title.append("({})".format(streamInfo["codec_name"].upper()))
         else:
-            output["title"] += "({})".format(output["extension"].upper())
+            title.append("({})".format(output.extension.upper()))
 
-        return AudioTrackInfo(
-            output["title"],
-            output["extension"],
-            output["default"],
-            output["id"],
-            output["language"],
-            0,
-            output["convert"],
-        )
+        output.title = " ".join(title)
+
+        return output
 
     def getSubtitleTemplate(self, ffInfo, trackid: int) -> SubtitleTrackInfo | None:
         if ffInfo["streams"][trackid]["codec_type"].lower() not in "subtitle":
             return None
         streamInfo = ffInfo["streams"][trackid]
+        output = SubtitleTrackInfo()
 
-        output = {}
         if streamInfo["codec_name"].lower() in "hdmv_pgs_subtitle":
-            output["extension"] = "sup"
+            output.extension = "sup"
         else:
-            output["extension"] = "srt"
+            output.extension = "srt"
 
-        output["sup2srt"] = False
-        output["filter"] = False
-        output["default"] = False
-        output["id"] = trackid
+        output.sup2srt = False
+        output.srtFilter = False
+        output.default = False
+        output.id = trackid
 
         if streamInfo["tags"]["language"]:
-            output["language"] = streamInfo["tags"]["language"]
+            output.language = streamInfo["tags"]["language"]
 
-        output["title"] = "{} Subtitles".format(output["language"].upper())
+        output.title = "{} Subtitles".format(output.language.upper())
 
-        if output["extension"] == "sup":
-            output["title"] += " (PGS)"
-        if output["extension"] == "srt":
-            output["title"] += " (SRT)"
+        if output.extension == "sup":
+            output.title += " (PGS)"
+        if output.extension == "srt":
+            output.title += " (SRT)"
 
-        return SubtitleTrackInfo(
-            output["title"],
-            output["extension"],
-            output["default"],
-            output["id"],
-            output["language"],
-            0,
-            output["sup2srt"],
-            output["filter"],
-            "",
-        )
+        return output
 
     def filterLanguages(self, audLangs: list[str] = [], subLangs: list[str] = []):
         if len(audLangs) > 0:
