@@ -11,7 +11,7 @@ import xml.etree.cElementTree as ET
 
 from ffmpeg_normalize import FFmpegNormalize
 from subtitle_filter import Subtitles
-from utils.info import Info, SubtitleTrackInfo, AudioTrackInfo
+from utils.info import Info, SubtitleTrackInfo, AudioTrackInfo, VideoTrackInfo
 from utils.videoinfo import videoInfo
 from vapoursynth import core, VideoNode
 
@@ -103,6 +103,48 @@ def main():
         help="List of subtitle languages to keep.",
         default=[],
     )
+    parser_config.add_argument(
+        "--config",
+        "-c",
+        dest="configFile",
+        type=str,
+        help="Config file output path.",
+        default="",
+    )
+
+    parser_sync_config = subparser.add_parser("syncconfigs", help="syncconfigs help")
+    parser_sync_config.add_argument(
+        "--base", "-b", dest="syncBase", type=str, help="base config file"
+    )
+    parser_sync_config.add_argument(
+        "--configs",
+        dest="syncConfigs",
+        action="extend",
+        nargs="+",
+        type=str,
+        help="List of config files.",
+    )
+    parser_sync_config.add_argument(
+        "--video",
+        "-v",
+        dest="syncVideo",
+        action=argparse.BooleanOptionalAction,
+        help='Sync a property from config\'s "video" section.',
+    )
+    parser_sync_config.add_argument(
+        "--audio",
+        "-a",
+        dest="syncAudio",
+        action=argparse.BooleanOptionalAction,
+        help='Sync a property from config\'s "audio" section.',
+    )
+    parser_sync_config.add_argument(
+        "--subtitles",
+        "-s",
+        dest="syncSubtitles",
+        action=argparse.BooleanOptionalAction,
+        help='Sync a property from config\'s "subtitle" section.',
+    )
     args = parser.parse_args()
 
     if args.clean:
@@ -110,9 +152,18 @@ def main():
     if args.cleanSources:
         cleanSourceFiles(folders, INFOFILE)
 
-    if args.sourceFile:
+    if "syncBase" in args:
+        syncConfigs(args.syncBase, args.syncConfigs, args.syncVideo, args.syncAudio, args.syncSubtitles)
+
+    if "sourceFile" in args:
         test = Info(sourceMKV=args.sourceFile, nightmode=args.configNightMode)
         test.filterLanguages(audLangs=args.configAudLangs, subLangs=args.configSubLangs)
+
+        if args.configFile:
+            print("Writting to '{}'".format(args.configFile))
+            configPath = Path(args.configFile)
+            configPath.write_text(str(test))
+
         print(test)
 
 
@@ -668,6 +719,66 @@ def extractTracks(info: Info):
 
     for i in range(len(tracks)):
         tempTracks[i].replace(tracks[i].getOutFile())
+
+
+def selectKeyFromDict(d: dict):
+    keys = list(d.keys())
+    print("-----------------------------------")
+    for i in range(0, len(keys)):
+        print("  {}: {}".format(i, keys[i]))
+
+    selection = int(
+        input(
+            "Which property? (between 0 and {}):".format(
+                len(keys) - 1
+            )
+        )
+    )
+    result = None
+    while True:
+        try:
+            result = keys[selection]
+            break
+        except:
+            selection = int(
+                input("Invalid input! (between 0 and {}):".format(len(keys) - 1))
+            )
+
+    return result
+
+
+def syncConfigs(
+    base: Path,
+    configs: list[Path],
+    videoInfo: bool = False,
+    audioInfo: bool = False,
+    subInfo: bool = False,
+):
+    base = Path(base)
+    configs = [Path(x) for x in configs]
+
+    baseInfo: Info = Info(jsonFile=base)
+
+    if videoInfo:
+        print("Syncing VideoInfo")
+        baseVideo: VideoTrackInfo = baseInfo.videoInfo
+        propToCopy = selectKeyFromDict(dict(baseVideo))
+
+        for config in configs:
+            configInfo = Info(jsonFile=config)
+            videoDict = dict(configInfo.videoInfo)
+            baseProp = dict(baseVideo)[propToCopy]
+            videoDict[propToCopy] = baseProp
+            configInfo.videoInfo = VideoTrackInfo(jsonData=videoDict)
+
+            print("Updating:", config)
+            config.write_text(str(configInfo))
+    if audioInfo:
+        print("Not implemented!")
+    if subInfo:
+        print("Not implemented!")
+
+    return
 
 
 # Based on this: https://code-examples.net/en/q/1ba5e27
