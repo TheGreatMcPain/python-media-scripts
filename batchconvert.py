@@ -153,7 +153,13 @@ def main():
         cleanSourceFiles(folders, INFOFILE)
 
     if "syncBase" in args:
-        syncConfigs(args.syncBase, args.syncConfigs, args.syncVideo, args.syncAudio, args.syncSubtitles)
+        syncConfigs(
+            args.syncBase,
+            args.syncConfigs,
+            args.syncVideo,
+            args.syncAudio,
+            args.syncSubtitles,
+        )
 
     if "sourceFile" in args:
         test = Info(sourceMKV=args.sourceFile, nightmode=args.configNightMode)
@@ -591,6 +597,7 @@ def convertAudioTrack(sourceFile: str, audioTrack: AudioTrackInfo):
     ffmpeg_normalize = FFmpegNormalize(
         audio_codec=audioTrack.convert["codec"],
         extra_output_options=encodeOpts,
+        progress=True,
     )
 
     if Path(audioTrack.getOutFile()).exists():
@@ -727,13 +734,7 @@ def selectKeyFromDict(d: dict):
     for i in range(0, len(keys)):
         print("  {}: {}".format(i, keys[i]))
 
-    selection = int(
-        input(
-            "Which property? (between 0 and {}):".format(
-                len(keys) - 1
-            )
-        )
-    )
+    selection = int(input("Which property? (between 0 and {}):".format(len(keys) - 1)))
     result = None
     while True:
         try:
