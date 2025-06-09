@@ -392,7 +392,8 @@ class Info:
             hdrSpec.append("HDR10+")
         elif videoInfo.HDR10:
             hdrSpec.append("HDR10")
-        title.append("/".join(hdrSpec))
+        if hdrSpec:
+            title.append("/".join(hdrSpec))
 
         # We are always using HEVC anyways.
         title.append("(HEVC)")
