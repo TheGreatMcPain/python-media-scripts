@@ -86,12 +86,20 @@ def main():
         "--nightmode", dest="configNightMode", action=argparse.BooleanOptionalAction
     )
     parser_config.add_argument(
+        "--languages",
+        dest="configLangs",
+        action="extend",
+        nargs="+",
+        type=str,
+        help="List of audio/subtitle languages to keep."
+    )
+    parser_config.add_argument(
         "--audio-languages",
         dest="configAudLangs",
         action="extend",
         nargs="+",
         type=str,
-        help="List of audio languages to keep.",
+        help="List of audio languages to keep. (Overrides '--languages')",
         default=[],
     )
     parser_config.add_argument(
@@ -100,7 +108,7 @@ def main():
         dest="configSubLangs",
         nargs="+",
         type=str,
-        help="List of subtitle languages to keep.",
+        help="List of subtitle languages to keep. (Overrides '--languages')",
         default=[],
     )
     parser_config.add_argument(
@@ -162,8 +170,15 @@ def main():
         )
 
     if "sourceFile" in args:
+        audLangs = args.configLangs
+        subLangs = args.configLangs
+        if args.configAudLangs:
+            audLangs = args.configAudLangs
+        if args.configSubLangs:
+            subLangs = args.configSubLangs
+
         test = Info(sourceMKV=args.sourceFile, nightmode=args.configNightMode)
-        test.filterLanguages(audLangs=args.configAudLangs, subLangs=args.configSubLangs)
+        test.filterLanguages(audLangs=audLangs, subLangs=subLangs)
 
         if args.configFile:
             print("Writting to '{}'".format(args.configFile))
