@@ -83,7 +83,7 @@ def main():
     parser_config = subparser.add_parser("config", help="config help")
     parser_config.add_argument("sourceFile")
     parser_config.add_argument(
-        "--nightmode", dest="configNightMode", action=argparse.BooleanOptionalAction
+        "--nightmode", dest="configNightMode", type=int, default=-1
     )
     parser_config.add_argument(
         "--languages",

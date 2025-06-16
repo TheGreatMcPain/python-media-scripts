@@ -208,7 +208,9 @@ class VideoTrackInfo:
 
 
 class Info:
-    def __init__(self, jsonFile=None, sourceMKV=None, nightmode: bool = False):
+    def __init__(self, jsonFile=None, sourceMKV=None, nightmode: int = -1):
+        self.blurayPath: str = ""
+        self.blurayFile: str = ""
         self.title: str = ""
         self.sourceMKV: str = ""
         self.outputFile: str = ""
@@ -217,6 +219,10 @@ class Info:
         self.subInfo: list[SubtitleTrackInfo] = []
         if jsonFile:
             jsonData: dict = json.loads(Path(jsonFile).read_text())
+            if "blurayPath" in jsonData:
+                self.blurayPath = jsonData["blurayPath"]
+            if "blurayFile" in jsonData:
+                self.blurayFile = jsonData["blurayFile"]
             self.sourceMKV = jsonData["sourceFile"]
             self.title = jsonData["title"]
             self.outputFile = jsonData["outputFile"]
@@ -302,6 +308,8 @@ class Info:
             audio.append(dict(audTrack))
         for subTrack in self.subInfo:
             subs.append(dict(subTrack))
+        yield "blurayPath", self.blurayPath
+        yield "blurayFile", self.blurayFile
         yield "title", self.title
         yield "sourceFile", self.sourceMKV
         yield "outputFile", self.outputFile
@@ -312,7 +320,7 @@ class Info:
     def __str__(self):
         return json.dumps(dict(self), indent=2)
 
-    def generateTemplate(self, sourceMKV: str, nightmode: bool = False):
+    def generateTemplate(self, sourceMKV: str, nightmode: int = -1):
         ffprobeInfo = dict(
             json.loads(
                 sp.check_output(
@@ -346,8 +354,7 @@ class Info:
             template = self.getAudioTemplate(ffprobeInfo, i)
             if template:
                 self.audioInfo.append(template)
-                if nightmode:
-                    nightmode = False
+                if nightmode == i:
                     self.audioInfo.append(
                         template.nightmodeTemplate(
                             "Stereo 'downmix'",
