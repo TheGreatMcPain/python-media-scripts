@@ -444,8 +444,9 @@ class Info:
 
         if streamInfo["codec_name"].lower() in "dts":
             output.extension = "dts"
-            if "dts-hd" in streamInfo["profile"].lower():
-                output.extension = "dtshd"
+            if "profile" in streamInfo:
+                if "dts-hd" in streamInfo["profile"].lower():
+                    output.extension = "dtshd"
         elif streamInfo["codec_name"].lower() in "truehd":
             output.extension = "truehd"
         elif streamInfo["codec_name"].lower() in "ac3":
