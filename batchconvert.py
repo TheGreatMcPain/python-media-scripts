@@ -83,7 +83,38 @@ def main():
     parser_config = subparser.add_parser("config", help="config help")
     parser_config.add_argument("sourceFile")
     parser_config.add_argument(
-        "--nightmode", dest="configNightMode", type=int, default=-1
+        "--title",
+        dest="configTitle",
+        type=str,
+        help="Title of output file.",
+        default="Insert Title Here",
+    )
+    parser_config.add_argument(
+        "--output",
+        dest="configOutputFile",
+        help="File name of output.",
+        default="Insert Title Here.mkv",
+    )
+    parser_config.add_argument(
+        "--nightmode",
+        dest="configNightMode",
+        help="Add 'nightmode' tracks based on track index.",
+        type=int,
+        default=-1,
+    )
+    parser_config.add_argument(
+        "--sup2srt",
+        dest="configSup2Srt",
+        help="Add text based subtitle tracks generated via 'sup2srt'.",
+        type=int,
+        default=-1,
+    )
+    parser_config.add_argument(
+        "--srt-filter",
+        dest="configSrtFilter",
+        help="Enable subtitle filter for text based subtitles.",
+        type=int,
+        default=-1,
     )
     parser_config.add_argument(
         "--languages",
@@ -91,7 +122,8 @@ def main():
         action="extend",
         nargs="+",
         type=str,
-        help="List of audio/subtitle languages to keep."
+        help="List of audio/subtitle languages to keep.",
+        default=[],
     )
     parser_config.add_argument(
         "--audio-languages",
@@ -177,9 +209,18 @@ def main():
         if args.configSubLangs:
             subLangs = args.configSubLangs
 
-        test = Info(sourceMKV=args.sourceFile, nightmode=args.configNightMode)
+        test = Info(
+            sourceMKV=args.sourceFile,
+            nightmode=args.configNightMode,
+            sup2srt=args.configSup2Srt,
+            srtFilter=args.configSrtFilter,
+        )
         test.filterLanguages(audLangs=audLangs, subLangs=subLangs)
 
+        if args.configTitle:
+            test.title = args.configTitle
+        if args.configOutputFile:
+            test.outputFile = args.configOutputFile
         if args.configFile:
             print("Writting to '{}'".format(args.configFile))
             configPath = Path(args.configFile)
@@ -792,7 +833,15 @@ def syncConfigs(
     if audioInfo:
         print("Not implemented!")
     if subInfo:
-        print("Not implemented!")
+        print("Syncing Subtitle Info")
+        baseSubInfo: list[SubtitleTrackInfo] = baseInfo.subInfo
+
+        for config in configs:
+            configInfo = Info(jsonFile=config)
+            configInfo.subInfo = baseSubInfo
+
+            print("Updating:", config)
+            config.write_text(str(configInfo))
 
     return
 

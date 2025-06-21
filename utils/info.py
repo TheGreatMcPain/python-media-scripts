@@ -208,7 +208,14 @@ class VideoTrackInfo:
 
 
 class Info:
-    def __init__(self, jsonFile=None, sourceMKV=None, nightmode: int = -1):
+    def __init__(
+        self,
+        jsonFile=None,
+        sourceMKV=None,
+        nightmode: int = -1,
+        sup2srt: int = -1,
+        srtFilter: int = -1,
+    ):
         self.blurayPath: str = ""
         self.blurayFile: str = ""
         self.title: str = ""
@@ -239,10 +246,11 @@ class Info:
                 self.videoInfo.x265Opts = jsonData["video"]["x265Opts"]
             if "vapoursynth" in jsonData["video"]:
                 vapoursynth = jsonData["video"]["vapoursynth"]
-                if "script" in vapoursynth:
-                    self.videoInfo.vapoursynthScript = vapoursynth["script"]
-                if "variables" in vapoursynth:
-                    self.videoInfo.vapoursynthVars = vapoursynth["variables"]
+                if vapoursynth:
+                    if "script" in vapoursynth:
+                        self.videoInfo.vapoursynthScript = vapoursynth["script"]
+                    if "variables" in vapoursynth:
+                        self.videoInfo.vapoursynthVars = vapoursynth["variables"]
             if "mkvmergeOpts" in jsonData["video"]:
                 self.videoInfo.mkvmergeOpts = jsonData["video"]["mkvmergeOpts"]
 
@@ -285,7 +293,9 @@ class Info:
                     self.subInfo.append(trackInfo)
 
         elif sourceMKV:
-            self.generateTemplate(sourceMKV, nightmode=nightmode)
+            self.generateTemplate(
+                sourceMKV, nightmode=nightmode, sup2srt=sup2srt, srtFilter=srtFilter
+            )
 
         for i in range(len(self.audioInfo)):
             audioTrack: AudioTrackInfo = self.audioInfo[i]
@@ -320,7 +330,13 @@ class Info:
     def __str__(self):
         return json.dumps(dict(self), indent=2)
 
-    def generateTemplate(self, sourceMKV: str, nightmode: int = -1):
+    def generateTemplate(
+        self,
+        sourceMKV: str,
+        nightmode: int = -1,
+        sup2srt: int = -1,
+        srtFilter: int = -1,
+    ):
         ffprobeInfo = dict(
             json.loads(
                 sp.check_output(
@@ -385,6 +401,17 @@ class Info:
         for i in range(len(ffprobeInfo["streams"])):
             template = self.getSubtitleTemplate(ffprobeInfo, i)
             if template:
+                if sup2srt == i:
+                    if srtFilter == i:
+                        filterSrt = copy.deepcopy(template)
+                        filterSrt.sup2srt = True
+                        filterSrt.srtFilter = True
+                        self.subInfo.append(filterSrt)
+                    tempSrt = copy.deepcopy(template)
+                    tempSrt.extension = "srt"
+                    tempSrt.title.replace("PGS", "SRT")
+                    tempSrt.sup2srt = True
+                    self.subInfo.append(tempSrt)
                 self.subInfo.append(template)
 
     def getVideoTemplate(self, ffInfo: dict, inFile: str) -> VideoTrackInfo:
@@ -473,7 +500,10 @@ class Info:
         elif streamInfo["channels"] == 2:
             title.append("Stereo")
         else:
-            title.append(streamInfo["channel_layout"][:3])
+            if "channel_layout" in streamInfo:
+                title.append(streamInfo["channel_layout"][:3])
+            elif streamInfo["channels"] == 6:
+                title.append("5.1")
             subType = "Surround"
             if "profile" in streamInfo:
                 if "atmos" in streamInfo["profile"].lower():
