@@ -404,12 +404,14 @@ class Info:
                 if sup2srt == i:
                     if srtFilter == i:
                         filterSrt = copy.deepcopy(template)
+                        filterSrt.extension = "srt"
+                        filterSrt.title = filterSrt.title.replace("PGS", "SRT")
                         filterSrt.sup2srt = True
                         filterSrt.srtFilter = True
                         self.subInfo.append(filterSrt)
                     tempSrt = copy.deepcopy(template)
                     tempSrt.extension = "srt"
-                    tempSrt.title.replace("PGS", "SRT")
+                    tempSrt.title = tempSrt.title.replace("PGS", "SRT")
                     tempSrt.sup2srt = True
                     self.subInfo.append(tempSrt)
                 self.subInfo.append(template)
