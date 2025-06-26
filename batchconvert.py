@@ -523,7 +523,7 @@ def encodeVideo(info: Info):
 
 
 def prepForcedSubs(track: SubtitleTrackInfo):
-    if not track.external:
+    if track.external:
         print("Not checking external subtitles for forced subs.")
         return 0
 
