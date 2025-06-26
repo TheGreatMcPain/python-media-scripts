@@ -47,6 +47,23 @@ def main():
 
     if selection == "y":
         blurayInfoList = filterBlurayInfo(jsonFile)
+
+        for blurayRoot in args.blurayDirs:
+            blurayPath = Path(blurayRoot)
+
+            if not isBluray(blurayPath):
+                print(blurayPath, "is not a BluRay Directory.")
+                parser.print_usage()
+                exit(1)
+
+            if str(blurayPath) not in [x["blurayDir"] for x in blurayInfoList]:
+                selection = input(
+                    "Add {} to {}. (y or n): ".format(blurayPath, jsonFile)
+                )
+            if selection == "y":
+                blurayInfo = getBlurayInfo(blurayPath)
+                blurayInfoList.append(blurayInfo)
+                jsonFile.write_text(json.dumps(blurayInfoList))
     else:
         if len(args.blurayDirs) == 0:
             print(
