@@ -149,7 +149,12 @@ def batchCreateMKVs(BluRayDir, titles, outFile):
         else:
             output = Path(title["folder"], outFile)
 
-        cmd = ["mkvmerge", "--output", str(output), str(inFile)]
+        if output.exists():
+            print(output, "exists!! skipping...")
+            continue
+        outputTemp = output.with_name("temp-" + outFile)
+
+        cmd = ["mkvmerge", "--output", str(outputTemp), str(inFile)]
 
         print("Running: ", end="")
         for x in cmd:
@@ -167,6 +172,7 @@ def batchCreateMKVs(BluRayDir, titles, outFile):
                 # Clean the rest of the line.
                 print("\033[K", end="")
         counter += 1
+        outputTemp.replace(output)
 
 
 def getBluRayFilePath(BluRayPath: Path, fileName: Path) -> Path:
