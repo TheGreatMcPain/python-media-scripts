@@ -46,7 +46,9 @@ def main():
         selection = input("Resume with it? (y or n): ")
 
     if selection == "y":
-        blurayInfoList = filterBlurayInfo(jsonFile)
+        blurayInfoList = json.loads(jsonFile.read_text())
+        if type(blurayInfoList) == dict:
+            blurayInfoList = [blurayInfoList]
 
         for blurayRoot in args.blurayDirs:
             blurayPath = Path(blurayRoot)
@@ -86,6 +88,8 @@ def main():
             blurayInfoList.append(blurayInfo)
             jsonFile.write_text(json.dumps(blurayInfoList))
 
+
+    blurayInfoList = filterBlurayInfo(blurayInfoList)
     for blurayInfo in blurayInfoList:
         batchCreateMKVs(blurayInfo["blurayDir"], blurayInfo["titles"], args.outFile)
 
@@ -94,15 +98,8 @@ def isBluray(blurayPath: Path) -> bool:
     return blurayPath.joinpath("BDMV", "index.bdmv").exists()
 
 
-def filterBlurayInfo(jsonFile: Path) -> list[dict]:
-    if not jsonFile.exists():
-        return []
-
+def filterBlurayInfo(blurayInfo: list) -> list[dict]:
     newInfo = []
-    blurayInfo = json.loads(jsonFile.read_text())
-    if type(blurayInfo) == dict:
-        blurayInfo = [blurayInfo]
-
     for root in blurayInfo:
         blurayDir = Path(root["blurayDir"])
         if not blurayDir.exists():
