@@ -650,6 +650,11 @@ def convertAudioTrack(sourceFile: str, audioTrack: AudioTrackInfo):
     encodeOpts = None
     tempOutFile = Path("temp-" + audioTrack.getOutFile())
     Filter: list = []
+
+    if "encodeOpts" in audioTrack.convert:
+        if audioTrack.convert["encodeOpts"]:
+            encodeOpts = audioTrack.convert["encodeOpts"]
+
     ffmpeg_normalize = FFmpegNormalize(
         audio_codec=audioTrack.convert["codec"],
         extra_output_options=encodeOpts,
@@ -659,9 +664,6 @@ def convertAudioTrack(sourceFile: str, audioTrack: AudioTrackInfo):
     if Path(audioTrack.getOutFile()).exists():
         print(audioTrack.getOutFile(), "already exists! skipping...")
         return 0
-
-    if [] != audioTrack.convert["encodeOpts"]:
-        encodeOpts = audioTrack.convert["encodeOpts"]
 
     if "filters" in audioTrack.convert:
         for ffFilter in audioTrack.convert["filters"]:
