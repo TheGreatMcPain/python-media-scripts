@@ -212,9 +212,9 @@ class Info:
         self,
         jsonFile=None,
         sourceMKV=None,
-        nightmode: int = -1,
-        sup2srt: int = -1,
-        srtFilter: int = -1,
+        nightmode: list[int] = [],
+        sup2srt: list[int] = [],
+        srtFilter: list[int] = [],
     ):
         self.blurayPath: str = ""
         self.blurayFile: str = ""
@@ -333,9 +333,9 @@ class Info:
     def generateTemplate(
         self,
         sourceMKV: str,
-        nightmode: int = -1,
-        sup2srt: int = -1,
-        srtFilter: int = -1,
+        nightmode: list[int] = [],
+        sup2srt: list[int] = [],
+        srtFilter: list[int] = [],
     ):
         ffprobeInfo = dict(
             json.loads(
@@ -370,7 +370,7 @@ class Info:
             template = self.getAudioTemplate(ffprobeInfo, i)
             if template:
                 self.audioInfo.append(template)
-                if nightmode == i:
+                if i in nightmode:
                     self.audioInfo.append(
                         template.nightmodeTemplate(
                             "Stereo 'downmix'",
@@ -401,8 +401,8 @@ class Info:
         for i in range(len(ffprobeInfo["streams"])):
             template = self.getSubtitleTemplate(ffprobeInfo, i)
             if template:
-                if sup2srt == i:
-                    if srtFilter == i:
+                if i in sup2srt:
+                    if i in srtFilter:
                         filterSrt = copy.deepcopy(template)
                         filterSrt.extension = "srt"
                         filterSrt.title = filterSrt.title.replace("PGS", "SRT")

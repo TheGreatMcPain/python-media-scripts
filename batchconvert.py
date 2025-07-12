@@ -99,22 +99,25 @@ def main():
         "--nightmode",
         dest="configNightMode",
         help="Add 'nightmode' tracks based on track index.",
+        nargs="+",
         type=int,
-        default=-1,
+        default=[],
     )
     parser_config.add_argument(
         "--sup2srt",
         dest="configSup2Srt",
         help="Add text based subtitle tracks generated via 'sup2srt'.",
+        nargs="+",
         type=int,
-        default=-1,
+        default=[],
     )
     parser_config.add_argument(
         "--srt-filter",
         dest="configSrtFilter",
         help="Enable subtitle filter for text based subtitles.",
+        nargs="+",
         type=int,
-        default=-1,
+        default=[],
     )
     parser_config.add_argument(
         "--languages",
