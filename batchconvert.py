@@ -662,6 +662,7 @@ def convertAudioTrack(sourceFile: str, audioTrack: AudioTrackInfo):
         audio_codec=audioTrack.convert["codec"],
         extra_output_options=encodeOpts,
         progress=True,
+        auto_lower_loudness_target=True,
     )
 
     if Path(audioTrack.getOutFile()).exists():
