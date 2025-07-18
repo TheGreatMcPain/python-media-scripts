@@ -420,6 +420,11 @@ class Info:
                         filterSrt.sup2srt = True
                         filterSrt.srtFilter = True
                         self.subInfo.append(filterSrt)
+                        template.title = " ".join(
+                            template.title.split(" ")[:1]
+                            + ["SDH"]
+                            + template.title.split(" ")[1:]
+                        )
                     tempSrt = copy.deepcopy(template)
                     tempSrt.extension = "srt"
                     tempSrt.title = tempSrt.title.replace("PGS", "SRT")
