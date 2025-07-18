@@ -214,16 +214,14 @@ def main():
 
         test = Info(
             sourceMKV=args.sourceFile,
+            title=args.configTitle,
+            outputFile=args.configOutputFile,
             nightmode=args.configNightMode,
             sup2srt=args.configSup2Srt,
             srtFilter=args.configSrtFilter,
         )
         test.filterLanguages(audLangs=audLangs, subLangs=subLangs)
 
-        if args.configTitle:
-            test.title = args.configTitle
-        if args.configOutputFile:
-            test.outputFile = args.configOutputFile
         if args.configFile:
             print("Writting to '{}'".format(args.configFile))
             configPath = Path(args.configFile)

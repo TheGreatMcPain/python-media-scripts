@@ -212,14 +212,16 @@ class Info:
         self,
         jsonFile=None,
         sourceMKV=None,
+        title: str = "",
+        outputFile: str = "",
         nightmode: list[int] = [],
         sup2srt: list[int] = [],
         srtFilter: list[int] = [],
     ):
         self.blurayPath: str = ""
         self.blurayFile: str = ""
-        self.title: str = ""
-        self.sourceMKV: str = ""
+        self.title: str = title
+        self.sourceMKV: str = outputFile
         self.outputFile: str = ""
         self.videoInfo: VideoTrackInfo
         self.audioInfo: list[AudioTrackInfo] = []
@@ -294,7 +296,12 @@ class Info:
 
         elif sourceMKV:
             self.generateTemplate(
-                sourceMKV, nightmode=nightmode, sup2srt=sup2srt, srtFilter=srtFilter
+                sourceMKV,
+                title=self.title,
+                outputFile=self.outputFile,
+                nightmode=nightmode,
+                sup2srt=sup2srt,
+                srtFilter=srtFilter,
             )
 
         for i in range(len(self.audioInfo)):
@@ -333,6 +340,8 @@ class Info:
     def generateTemplate(
         self,
         sourceMKV: str,
+        title: str,
+        outputFile: str,
         nightmode: list[int] = [],
         sup2srt: list[int] = [],
         srtFilter: list[int] = [],
@@ -359,10 +368,12 @@ class Info:
         )
         self.sourceMKV = sourceMKV
         self.title = "Insert Title Here"
-        if "tags" in ffprobeInfo["format"]:
+        if title:
+            self.title = title
+        elif "tags" in ffprobeInfo["format"]:
             if "title" in ffprobeInfo["format"]["tags"]:
                 self.title = ffprobeInfo["format"]["tags"]["title"]
-        self.outputFile = "Insert Name Here.mkv"
+        self.outputFile = "{}.mkv".format(self.title)
 
         self.videoInfo = self.getVideoTemplate(ffprobeInfo, sourceMKV)
 
