@@ -312,11 +312,14 @@ class Info:
             subTrack.index = i
 
             if not subTrack.sup2srt:
-                continue
+                if not subTrack.srtFilter:
+                    continue
             for x in self.subInfo:
-                if not x.sup2srt and x.id == subTrack.id:
-                    subTrack.sourceTrack = x
-                    break
+                if x.id == subTrack.id:
+                    if not x.sup2srt:
+                        subTrack.sourceTrack = x
+                    if not x.srtFilter:
+                        subTrack.sourceTrack = x
 
     def __iter__(self):
         audio = []

@@ -581,6 +581,13 @@ def prepForcedSubs(track: SubtitleTrackInfo):
         os.remove("subtitles-temp.sup")
 
 
+def subtitlesFilter(track: SubtitleTrackInfo):
+    print("Creating non-SDH subtitles.")
+    srt = Subtitles(track.getOutFile())
+    srt.filter()
+    srt.save()
+
+
 def subtitlesOCR(track: SubtitleTrackInfo):
     if not shutil.which("sup2srt"):
         print("'sup2srt' is not found!")
@@ -605,16 +612,18 @@ def subtitlesOCR(track: SubtitleTrackInfo):
     sup2srtProcess.communicate()
 
     if track.srtFilter:
-        print("Creating non-SDH subtitles.")
-        srt = Subtitles(track.getOutFile())
-        srt.filter()
-        srt.save()
+        subtitlesFilter(track)
 
 
 def convertSubtitles(info: Info):
     for track in info.subInfo:
         if track.sup2srt:
             subtitlesOCR(track)
+        elif track.srtFilter:
+            if not track.sourceTrack:
+                continue
+            shutil.copy(track.sourceTrack.getOutFile(), track.getOutFile())
+            subtitlesFilter(track)
         else:
             prepForcedSubs(track)
 
@@ -761,6 +770,8 @@ def extractTracks(info: Info):
             print(track.getOutFile(), "already exists! skipping...")
             continue
         if track.sup2srt:
+            continue
+        if track.srtFilter:
             continue
         if track.external:
             continue
