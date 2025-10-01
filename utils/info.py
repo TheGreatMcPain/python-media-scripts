@@ -61,7 +61,8 @@ class SubtitleTrackInfo(TrackInfo):
         yield "title", self.title
         yield "extension", self.extension
         yield "default", self.default
-        yield "id", self.id
+        if self.id:
+            yield "id", self.id
         yield "language", self.language
         if self.sync:
             yield "sync", self.sync
@@ -277,12 +278,13 @@ class Info:
                 for i in range(len(jsonData["subs"])):
                     track = jsonData["subs"][i]
                     trackInfo = SubtitleTrackInfo(
-                        track["title"],
-                        track["extension"],
-                        track["default"],
-                        track["id"],
-                        track["language"],
+                        title=track["title"],
+                        extension=track["extension"],
+                        default=track["default"],
+                        language=track["language"],
                     )
+                    if "id" in track:
+                        trackInfo.id = track["id"]
                     if "sup2srt" in track:
                         trackInfo.sup2srt = track["sup2srt"]
                     if "filter" in track:
