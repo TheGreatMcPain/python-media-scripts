@@ -617,6 +617,10 @@ def subtitlesOCR(track: SubtitleTrackInfo):
 
 def convertSubtitles(info: Info):
     for track in info.subInfo:
+        if not track.sup2srt and not track.srtFilter:
+            prepForcedSubs(track)
+
+    for track in info.subInfo:
         if track.sup2srt:
             subtitlesOCR(track)
         elif track.srtFilter:
@@ -624,8 +628,6 @@ def convertSubtitles(info: Info):
                 continue
             shutil.copy(track.sourceTrack.getOutFile(), track.getOutFile())
             subtitlesFilter(track)
-        else:
-            prepForcedSubs(track)
 
 
 def ffmpegRun(cmd):
