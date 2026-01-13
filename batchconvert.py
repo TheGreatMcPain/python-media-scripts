@@ -581,9 +581,9 @@ def prepForcedSubs(track: SubtitleTrackInfo):
         os.remove("subtitles-temp.sup")
 
 
-def subtitlesFilter(track: SubtitleTrackInfo):
+def subtitlesFilter(inFile: str):
     print("Creating non-SDH subtitles.")
-    srt = Subtitles(track.getOutFile())
+    srt = Subtitles(inFile)
     srt.filter()
     srt.save()
 
@@ -597,12 +597,15 @@ def subtitlesOCR(track: SubtitleTrackInfo):
         print("'sup2srt' enabled, but no matching 'sup' track.")
         exit(1)
 
+    tempOutFile = Path("temp-" + track.getOutFile())
+    outFile = Path(track.getOutFile())
+
     cmd = [
         "sup2srt",
         "-l",
         track.language,
         "-o",
-        track.getOutFile(),
+        str(tempOutFile),
         track.sourceTrack.getOutFile(),
     ]
 
@@ -612,7 +615,9 @@ def subtitlesOCR(track: SubtitleTrackInfo):
     sup2srtProcess.communicate()
 
     if track.srtFilter:
-        subtitlesFilter(track)
+        subtitlesFilter(str(tempOutFile))
+
+    tempOutFile.replace(outFile)
 
 
 def convertSubtitles(info: Info):
@@ -621,13 +626,17 @@ def convertSubtitles(info: Info):
             prepForcedSubs(track)
 
     for track in info.subInfo:
+
         if track.sup2srt:
+            if Path(track.getOutFile()).exists():
+                print(track.getOutFile(), "already exists! skipping...")
+                continue
             subtitlesOCR(track)
         elif track.srtFilter:
             if not track.sourceTrack:
                 continue
             shutil.copy(track.sourceTrack.getOutFile(), track.getOutFile())
-            subtitlesFilter(track)
+            subtitlesFilter(track.getOutFile())
 
 
 def ffmpegRun(cmd):
